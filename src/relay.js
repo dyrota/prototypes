@@ -2,26 +2,30 @@
 // RELAY: same gauntlet for both players; the cards you pass up go to your rival.
 // =====================================================================
 const ENC=[
-  {n:'Cellar Rats',need:3,vp:1},{n:'Road Bandits',need:4,vp:1},{n:'Wolf Pack',need:5,vp:2},{n:'Bog Hag',need:5,vp:2,fail:2},
-  {n:'Ogre',need:6,vp:2},{n:'Bandit Lord',need:7,vp:3},{n:'Wyvern',need:8,vp:3},{n:'Bridge Troll',need:8,vp:3,fail:2},
-  {n:'Lich',need:9,vp:4},{n:'Hill Giant',need:10,vp:4},{n:'Elder Wyrm',need:11,vp:5},{n:'The Hollow King',need:13,vp:6},
+  {n:'Cellar Rats',need:3,vp:1,art:'⊛'},{n:'Road Bandits',need:4,vp:1,art:'⚑'},{n:'Wolf Pack',need:5,vp:2,art:'☾'},{n:'Bog Hag',need:5,vp:2,fail:2,art:'☋'},
+  {n:'Ogre',need:6,vp:2,art:'♜'},{n:'Bandit Lord',need:7,vp:3,art:'♚'},{n:'Wyvern',need:8,vp:3,art:'⚶'},{n:'Bridge Troll',need:8,vp:3,fail:2,art:'⛰'},
+  {n:'Lich',need:9,vp:4,art:'☠'},{n:'Hill Giant',need:10,vp:4,art:'♟'},{n:'Elder Wyrm',need:11,vp:5,art:'⚸'},{n:'The Hollow King',need:13,vp:6,art:'♛'},
 ];
+ENC.forEach(e=>e.art+=T);
 const RLC={
-  spear:{n:'Spear',m:1},
-  ration:{n:'Rations',m:0,draw:1,txt:'Draw 1 card.'},
-  wound:{n:'Wound',m:0,txt:'Dead weight.'},
-  blade:{n:'Blade',m:2},
-  great:{n:'Greatsword',m:3},
-  scout:{n:'Scout',m:1,draw:1,txt:'Draw 1 card.'},
-  squire:{n:'Squire',m:0,draw:2,txt:'Draw 2 cards.'},
-  warband:{n:'Warband',m:1,txt:'+1 for each other Warband you play this turn.'},
-  medic:{n:'Medic',m:1,txt:'Banish every Wound you play this turn.'},
-  berserk:{n:'Berserker',m:4,txt:'After the fight, gain a Wound.'},
-  trophy:{n:'Trophy',m:0,vp:2,txt:'2 ★ when you take it. Dead weight after.'},
-  tactician:{n:'Tactician',m:0,txt:'+1 for each different card you play this turn (not Wounds).'},
-  lance:{n:'Lance',m:1,txt:'+3 more against foes that need 8 or more.'},
+  spear:{n:'Spear',m:1,kind:'a',art:'↟'},
+  ration:{n:'Rations',m:0,draw:1,kind:'a',art:'♨',txt:'Draw 1 card.'},
+  wound:{n:'Wound',m:0,kind:'d',art:'✖',txt:'Dead weight.'},
+  blade:{n:'Blade',m:2,kind:'b',art:'⚔'},
+  great:{n:'Greatsword',m:3,kind:'b',art:'⚔'},
+  scout:{n:'Scout',m:1,draw:1,kind:'c',art:'⌖',txt:'Draw 1 card.'},
+  squire:{n:'Squire',m:0,draw:2,kind:'c',art:'♞',txt:'Draw 2 cards.'},
+  warband:{n:'Warband',m:1,kind:'b',art:'⚐',txt:'+1 for each other Warband you play this turn.'},
+  medic:{n:'Medic',m:1,kind:'c',art:'✚',txt:'Banish every Wound you play this turn.'},
+  berserk:{n:'Berserker',m:4,kind:'b',art:'✹',txt:'After the fight, gain a Wound.'},
+  trophy:{n:'Trophy',m:0,vp:2,kind:'e',art:'♛',txt:'2 ★ when you take it. Dead weight after.'},
+  tactician:{n:'Tactician',m:0,kind:'c',art:'♜',txt:'+1 for each different card you play this turn (not Wounds).'},
+  lance:{n:'Lance',m:1,kind:'b',art:'➶',txt:'+3 more against foes that need 8 or more.'},
 };
-for(const d of Object.values(RLC))d.face=d.m?`<div class="weave">⚔ ${d.m}</div>`:'';
+for(const d of Object.values(RLC)){
+  d.art+=T;
+  d.face=`<span class="glyph">${d.art}</span>${d.m?`<span class="might">⚔${T} ${d.m}</span>`:''}`;
+}
 const RL_POOL={blade:6,great:4,scout:5,squire:3,warband:6,medic:4,berserk:4,trophy:4,tactician:3,lance:4};
 // Bot: rough worth of a card to a given player at this point in the gauntlet.
 function rlValue(k,P,st){
@@ -40,9 +44,10 @@ function rlValue(k,P,st){
     default:return 0;
   }
 }
+const wounds=p=>p.deck.concat(p.discard,p.hand).filter(k=>k==='wound').length;
 
 const GAME={
-  key:'relay',title:'Relay',color:'var(--rl)',
+  key:'relay',title:'Relay',
   hook:'You both face the same twelve foes in the same order. The cards you pass up become your rival’s next offer.',
   turn:['Fight this round’s foe with your hand. Beat it for ★, or take a Wound.','Take 1 of the 3 cards on offer. The other 2 go to your rival’s offer.','Optionally banish one card you just played.'],
   watch:'Do you ever pass a card to hurt your rival rather than taking the best one? Is knowing the upcoming foes enough to plan?',
@@ -53,6 +58,7 @@ const GAME={
     'Then you may banish one card you played this fight, removing it from the game.',
     'After 12 rounds, most ★ wins.',
   ],
+  maxRounds:12,
   score:(st,i)=>st.players[i].score,
   setup(){
     const pool=shuffle(Object.entries(RL_POOL).flatMap(([k,n])=>rep(k,n)));
@@ -63,32 +69,49 @@ const GAME={
     return {turn:0,round:1,players,pool,phase:'fight',fight:null,played:[],passing:null,log:[],over:false};
   },
   view(st,ctx){
-    const me=st.turn,L=ctx.label,P=st.players[me];
-    const ladder=`<div class="ladder">${ENC.map((e,i)=>`<div class="rung ${i===st.round-1&&!st.over?'now':''}"><b>${i+1}. ${e.n}</b>
-      <span class="mono">⚔ ${e.need} → ${e.vp} ★${e.fail?` · fail: ${e.fail} Wounds`:''}</span>
-      <span class="r">${[0,1].map(s=>st.players[s].results[i]?`<span class="res ${st.players[s].results[i]}" title="${L(s)}">${s+1}${st.players[s].results[i]}</span>`:'').join('')}</span></div>`).join('')}</div>`;
-    let h='';
-    if(!ctx.canAct){h+=`<div class="panel"><p class="status">${st.over?'Game over.':`Waiting for ${L(me)}.`}</p></div>`}
-    else if(st.phase==='fight'){
-      const e=ENC[st.round-1];
-      h+=`<div class="panel"><div class="spread"><h3>Round ${st.round}: ${e.n} needs ⚔ ${e.need}</h3><button class="btn primary" data-a="rlFight">Fight</button></div>
-        <p class="muted">Your hand. Draw cards resolve automatically when you fight.</p>
-        <div class="cards">${P.hand.map(k=>cardHTML(RLC[k],{face:RLC[k].face})).join('')}</div>
-        <p class="muted">Deck ${P.deck.length} · discard ${P.discard.length} · Wounds owned ${P.deck.concat(P.discard).filter(k=>k==='wound').length}</p></div>`;
-    }else{
-      const f=st.fight;
-      h+=`<div class="panel"><h3 class="${f.win?'ok':'no'}">${f.win?`Won: ⚔ ${f.m} vs ${f.need}, +${f.vp} ★`:`Lost: ⚔ ${f.m} vs ${f.need}, gained ${f.wounds} Wound${f.wounds===1?'':'s'}`}</h3>
-        <p class="muted">Played: ${f.played.map(k=>RLC[k].n).join(', ')}${f.healed?` · Medic banished ${f.healed} Wound${f.healed===1?'':'s'}`:''}${f.bz?` · Berserker cost ${f.bz} Wound${f.bz===1?'':'s'}`:''}</p></div>`;
-      if(st.phase==='draft'){
-        h+=`<div class="panel"><h3>Take one</h3><p class="muted">The two you leave go to ${L(1-me)}’s next offer.</p>
-          <div class="cards">${P.tray.map((k,i)=>cardHTML(RLC[k],{btn:true,face:RLC[k].face,attrs:`data-a="rlPick" data-i="${i}"`})).join('')}</div></div>`;
-      }else{
-        h+=`<div class="panel"><h3>Banish one card you played?</h3><p class="muted">Took ${RLC[st.picked].n}. Banishing removes the card from the game. Choosing ends your turn.</p>
-          <div class="cards mini">${st.played.map((k,i)=>cardHTML(RLC[k],{btn:true,face:RLC[k].face,attrs:`data-a="rlBanish" data-i="${i}" aria-label="Banish ${RLC[k].n}"`})).join('')}</div>
-          <div class="row"><button class="btn primary" data-a="rlBanish" data-i="skip">Keep them all and end turn</button></div></div>`;
-      }
+    const S=ctx.seat,A=st.turn,L=ctx.label,act=ctx.canAct,P=st.players,me=P[S];
+    const info=i=>`${P[i].deck.length+P[i].discard.length+P[i].hand.length} cards · ${wounds(P[i])} Wounds`;
+    const v={oppInfo:info(1-S),meInfo:info(S),arena:'',hand:'',actions:'',prompt:''};
+    const mk=(r,who)=>r?`<span class="mk ${r} ${who}" title="${who==='me'?L(S):L(1-S)}: ${r==='W'?'won':'lost'}">${r}</span>`:'';
+    const track=`<div class="track">${ENC.map((x,i)=>`<div class="node${i===st.round-1&&!st.over?' now':''}${i<st.round-1||st.over?' past':''}" title="${x.n}: needs ${x.need}"><span class="nn">${i+1}</span><span class="marks">${mk(me.results[i],'me')}${mk(P[1-S].results[i],'opp')}</span></div>`).join('')}</div>`;
+    const e=ENC[Math.min(st.round,ENC.length)-1],f=st.fight;
+    const foe=`<div class="foe${FX.fight?(f&&f.win?' hit':' roar'):''}"><div class="foe-art">${e.art}</div><div class="foe-name">${e.n}</div>
+      <div class="foe-stats"><span class="chip">needs ⚔${T} ${e.need}</span><span class="chip gold">${e.vp} ★</span>${e.fail?`<span class="chip bad">fail: ${e.fail} Wounds</span>`:''}</div></div>`;
+    let side='';
+    if(f&&st.phase!=='fight'){
+      side=`<div class="result ${f.win?'win':'loss'}"><div class="rt">${f.win?'Victory':'Defeated'}</div><div class="rm">⚔${T} ${f.m} / ${f.need}</div>
+        <div>${f.win?`+${f.vp} ★`:`+${f.wounds} Wound${f.wounds===1?'':'s'}`}${f.healed?` · Medic healed ${f.healed}`:''}${f.bz?` · Berserker cost ${f.bz}`:''}</div></div>`;
     }
-    return h+`<div class="panel"><h3>The gauntlet</h3>${ladder}</div>`;
+    v.arena=track+`<div class="battle">${foe}${side}</div>`;
+    if(st.over)return v;
+    const preview=()=>`<div class="peek-label">Your next hand</div>`+handHTML(me.hand.map(k=>({def:RLC[k],o:{cls:'peek'}})));
+    const line=(btn)=>`<div class="line">${st.played.map((k,i)=>cardHTML(RLC[k],{btn,cls:`sm${FX.fight?' deal':''}${btn?' banishable':''}`,style:`--i:${i}`,
+      attrs:btn?`data-a="rlBanish" data-i="${i}" aria-label="Banish ${RLC[k].n}"`:''})).join('')}</div>`;
+    if(st.phase==='fight'){
+      if(act){
+        v.prompt=`Round ${st.round}: ${e.n} needs ⚔${T} ${e.need}. Your whole hand fights.`;
+        v.hand=handHTML(me.hand.map(k=>({def:RLC[k],o:{}})));
+        v.actions=`<button class="btn primary big" data-a="rlFight">Fight</button>`;
+      }else{v.prompt=`${L(A)} is fighting ${e.n}.`;v.hand=preview()}
+    }else if(st.phase==='draft'){
+      const tray=P[A].tray;
+      v.arena+=`<div class="sub">Battle line</div>`+line(false);
+      if(act){
+        v.prompt=`Take one card. The other two go to ${L(1-A)}.`;
+        v.arena+=`<div class="sub">Spoils</div><div class="spoils">${tray.map((k,i)=>cardHTML(RLC[k],{btn:true,cls:'glow deal',style:`--i:${i}`,attrs:`data-a="rlPick" data-i="${i}"`})).join('')}</div>`;
+      }else{
+        v.prompt=`${L(A)} is choosing spoils. Two of these come to ${A===S&&!ctx.hot?'them':'you'}.`;
+        v.arena+=`<div class="sub">Spoils</div><div class="spoils">${tray.map((k,i)=>cardHTML(RLC[k],{cls:'deal',style:`--i:${i}`})).join('')}</div>`;
+        v.hand=preview();
+      }
+    }else{
+      if(act){
+        v.prompt='Banish one card you played, or keep them all.';
+        v.arena+=`<div class="sub">Tap a card to banish it</div>`+line(true);
+        v.actions=`<button class="btn primary big" data-a="rlBanish" data-i="skip">Keep all</button>`;
+      }else{v.prompt=`${L(A)} may banish a card.`;v.arena+=line(false);v.hand=preview()}
+    }
+    return v;
   },
   on:{
     rlFight(st,_,ctx){
@@ -100,23 +123,25 @@ const GAME={
       for(const k of played){m+=RLC[k].m||0;if(k==='warband')m+=wb-1;if(k==='tactician')m+=distinct;if(k==='lance'&&e.need>=8)m+=3}
       let kept=played,healed=0;
       if(played.includes('medic')){healed=played.filter(k=>k==='wound').length;kept=played.filter(k=>k!=='wound')}
-      const win=m>=e.need;let vp=0,wounds=0;
+      const win=m>=e.need;let vp=0,wnd=0;
       if(win){vp=e.vp+(m>=e.need+3?1:0);P.score+=vp}
-      else{wounds=e.fail||1;P.discard.push(...rep('wound',wounds))}
+      else{wnd=e.fail||1;P.discard.push(...rep('wound',wnd))}
       const bz=played.filter(k=>k==='berserk').length;P.discard.push(...rep('wound',bz));
       P.results[st.round-1]=win?'W':'L';
-      st.fight={played,m,need:e.need,win,vp,wounds,healed,bz};st.played=kept;st.phase='draft';
+      st.fight={played,m,need:e.need,win,vp,wounds:wnd,healed,bz};st.played=kept;st.phase='draft';
+      FX.fight=true;
+      if(win){pop(st.turn,`+${vp} ★`);sfx('win')}else{pop(st.turn,`+${wnd} Wound${wnd===1?'':'s'}`,'bad');sfx('lose')}
       st.log.push(`${ctx.label(st.turn)} ${win?'beat':'lost to'} ${e.n} with ⚔ ${m}${win?` (+${vp} ★)`:''}.`);
     },
     rlPick(st,i,ctx){
       const P=st.players[st.turn],k=P.tray.splice(+i,1)[0];
-      if(RLC[k].vp)P.score+=RLC[k].vp;
+      if(RLC[k].vp){P.score+=RLC[k].vp;pop(st.turn,`+${RLC[k].vp} ★`);sfx('score')}else sfx('card');
       P.discard.push(k);st.passing=P.tray;P.tray=[];st.picked=k;st.phase='banish';
       st.log.push(`${ctx.label(st.turn)} took ${RLC[k].n} and passed ${st.passing.map(x=>RLC[x].n).join(' and ')||'nothing'}.`);
     },
     rlBanish(st,i,ctx){
       const me=st.turn,P=st.players[me],O=st.players[1-me];
-      if(i!=='skip'){const k=st.played.splice(+i,1)[0];st.log.push(`${ctx.label(me)} banished ${RLC[k].n}.`)}
+      if(i!=='skip'){const k=st.played.splice(+i,1)[0];st.log.push(`${ctx.label(me)} banished ${RLC[k].n}.`);sfx('bad')}else sfx('tap');
       P.discard.push(...st.played);st.played=[];P.hand=draw(P,5);
       O.tray=st.passing.concat(st.pool.splice(0,3-st.passing.length));
       st.passing=null;st.fight=null;st.phase='fight';

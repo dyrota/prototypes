@@ -1,7 +1,7 @@
 // =====================================================================
 // LOOM: each card is a link; you continue the thread your opponent left.
 // =====================================================================
-const SYM={S:'☀',M:'☾',L:'❦',W:'≈'};
+const SYM={S:'☼',M:'☾'+T,L:'❦'+T,W:'≈'};
 const SYMNAME={S:'Sun',M:'Moon',L:'Leaf',W:'Wave'};
 const symH=s=>s==='*'?'<span class="sym any" title="any symbol">✱</span>'
   :s==='='?'<span class="sym any" title="same as incoming">=</span>'
@@ -10,26 +10,28 @@ const LMC={
   spSM:{n:'Spindle',in:'S',out:'M',g:1},spML:{n:'Spindle',in:'M',out:'L',g:1},spLW:{n:'Spindle',in:'L',out:'W',g:1},spWS:{n:'Spindle',in:'W',out:'S',g:1},
   spSL:{n:'Spindle',in:'S',out:'L',g:1},spMW:{n:'Spindle',in:'M',out:'W',g:1},spLS:{n:'Spindle',in:'L',out:'S',g:1},spWM:{n:'Spindle',in:'W',out:'M',g:1},
   knot:{n:'Knot',in:'*',out:'=',g:0,txt:'Matches anything and passes the symbol through.'},
-  silk:{n:'Silk',cost:2,in:'S',out:'M',g:2},
-  copper:{n:'Copper Thread',cost:2,in:'M',out:'W',g:2},
-  silver:{n:'Silver Thread',cost:2,in:'W',out:'L',g:2},
-  moss:{n:'Moss Thread',cost:2,in:'L',out:'S',g:2},
-  bobbin:{n:'Bobbin',cost:3,in:'M',out:'S',g:0,draw:1,txt:'Draw 1 card.'},
-  shuttle:{n:'Shuttle',cost:3,in:'L',out:'W',g:0,draw:1,txt:'Draw 1 card.'},
-  snarl:{n:'Snarl',cost:3,in:'S',out:'W',g:1,txt:'If your thread ends on this, your opponent loses a random card from their next hand.'},
-  gold:{n:'Gold Thread',cost:4,in:'*',out:'=',g:2,txt:'Matches anything and passes the symbol through.'},
-  mark:{n:'Weaver’s Mark',cost:4,in:'*',out:'*',g:1,txt:'Matches anything. You choose the outgoing symbol.'},
-  tapestry:{n:'Tapestry',cost:5,in:'W',out:'S',vp:2},
-  banner:{n:'Banner',cost:5,in:'M',out:'L',vp:2},
-  master:{n:'Masterwork',cost:8,in:'*',out:'*',vp:4,txt:'Matches anything. You choose the outgoing symbol.'},
+  silk:{n:'Silk',cost:2,in:'S',out:'M',g:2,kind:'b'},
+  copper:{n:'Copper Thread',cost:2,in:'M',out:'W',g:2,kind:'b'},
+  silver:{n:'Silver Thread',cost:2,in:'W',out:'L',g:2,kind:'b'},
+  moss:{n:'Moss Thread',cost:2,in:'L',out:'S',g:2,kind:'b'},
+  bobbin:{n:'Bobbin',cost:3,in:'M',out:'S',g:0,draw:1,kind:'d',txt:'Draw 1 card.'},
+  shuttle:{n:'Shuttle',cost:3,in:'L',out:'W',g:0,draw:1,kind:'d',txt:'Draw 1 card.'},
+  snarl:{n:'Snarl',cost:3,in:'S',out:'W',g:1,kind:'d',txt:'If your thread ends on this, your opponent loses a random card from their next hand.'},
+  gold:{n:'Gold Thread',cost:4,in:'*',out:'=',g:2,kind:'d',txt:'Matches anything and passes the symbol through.'},
+  mark:{n:'Weaver’s Mark',cost:4,in:'*',out:'*',g:1,kind:'d',txt:'Matches anything. You choose the outgoing symbol.'},
+  tapestry:{n:'Tapestry',cost:5,in:'W',out:'S',vp:2,kind:'c'},
+  banner:{n:'Banner',cost:5,in:'M',out:'L',vp:2,kind:'c'},
+  master:{n:'Masterwork',cost:8,in:'*',out:'*',vp:4,kind:'c',txt:'Matches anything. You choose the outgoing symbol.'},
 };
+const faceBead=s=>s==='*'?'<span class="fb any">✱</span>':s==='='?'<span class="fb any">=</span>':`<span class="fb ${s}">${SYM[s]}</span>`;
 for(const d of Object.values(LMC)){
   const bits=[];
   if(d.g)bits.push(`+${d.g} Glamour.`);
   if(d.vp)bits.push(`${d.vp} ★ each time you weave it.`);
   if(d.txt)bits.push(d.txt);
   d.txt=bits.join(' ');
-  d.face=`<div class="weave">${symH(d.in)}→${symH(d.out)}</div>`;
+  d.kind=d.kind||'a';
+  d.face=`<div class="links-face">${faceBead(d.in)}<span class="arrow">→</span>${faceBead(d.out)}</div>`;
 }
 const LM_SUPPLY={silk:6,copper:6,silver:6,moss:6,bobbin:5,shuttle:5,snarl:5,gold:5,mark:5,tapestry:6,banner:6,master:4};
 const lmBonus=n=>n>=6?4:n===5?2:n===4?1:0;
@@ -40,11 +42,12 @@ function lmApply(st,i,chosen){
   const match=lmMatch(c,cur),inS=c.in==='*'?cur:c.in;
   const out=c.out==='='?inS:c.out==='*'?chosen:c.out;
   st.chain.push({k:key,out,dead:!match});
+  FX.bead=true;
   if(match){
     st.glamour+=c.g||0;
-    if(c.vp){P.score+=c.vp;st.vpGained+=c.vp}
+    if(c.vp){P.score+=c.vp;st.vpGained+=c.vp;pop(st.turn,`+${c.vp} ★`);sfx('score')}else sfx('card');
     if(c.draw)P.hand.push(...draw(P,c.draw));
-  }
+  }else sfx('tap');
 }
 function lmInCounts(pl){
   const c={S:0,M:0,L:0,W:0,'*':0};
@@ -75,9 +78,19 @@ function lmBotBuy(st){
   const order=['master','tapestry','banner','gold','mark','bobbin','shuttle','snarl','silk','copper','silver','moss'];
   return order.find(k=>s[k]>0&&LMC[k].cost<=g&&(LMC[k].cost>=g-2||g<4));
 }
+function threadHTML(st,L){
+  let h=`<div class="bead start ${st.end}" title="Thread start">${SYM[st.end]}<small>${st.endBy==null?'Start':L(st.endBy)}</small></div>`;
+  st.chain.forEach((x,j)=>{
+    const last=j===st.chain.length-1;
+    h+=`<div class="link${x.dead?' dead':''}"></div><div class="bead ${x.out}${x.dead?' dead':''}${last?' end':''}${last&&FX.bead?' new':''}">${SYM[x.out]}<small>${LMC[x.k].n}</small></div>`;
+  });
+  if(!st.chain.length)h=h.replace('bead start','bead start end');
+  return `<div class="thread">${h}</div>`;
+}
+const meterHTML=n=>`<div class="meter" aria-label="Thread length ${n}">${[1,2,3,4,5,6].map(i=>`<span class="notch${i<=n?' on':''}${i>=4?' b':''}">${i===4?'+1':i===5?'+2':i===6?'+4':''}</span>`).join('')}</div>`;
 
 const GAME={
-  key:'loom',title:'Loom',color:'var(--lm)',
+  key:'loom',title:'Loom',
   hook:'Every card is a link from one symbol to another. You start your turn wherever your opponent left the thread.',
   turn:['Continue the shared thread from the symbol your opponent ended on, matching card to card.','Score Glamour, ★ and a bonus for long threads, then buy.','The symbol you end on is where your opponent must start.'],
   watch:'Do you feel the pull between a long thread and a nasty ending symbol? Do turns fizzle when you inherit a bad symbol?',
@@ -90,6 +103,7 @@ const GAME={
     'Leftover cards are discarded. Draw 5 at the end of your turn.',
     'The game ends after the round in which the Masterworks or any two piles run out, or after round 14.',
   ],
+  maxRounds:14,
   score:(st,i)=>st.players[i].score,
   setup(){
     const starter=['spSM','spML','spLW','spWS','spSL','spMW','spLS','spWM','knot','knot'];
@@ -98,50 +112,56 @@ const GAME={
       bought:[],pending:null,log:['The thread starts on a random symbol.'],over:false,endTriggered:false};
   },
   view(st,ctx){
-    const me=st.turn,opp=1-me,L=ctx.label,P=st.players[me],O=st.players[opp];
-    const thread=`<div class="thread"><span class="label">${st.endBy==null?'Start':`${L(st.endBy)} left`}</span>${symH(st.end)}${st.chain.map(x=>`<span class="muted">→</span><span class="knot ${x.dead?'dead':''}">${LMC[x.k].n} ${symH(x.out)}</span>`).join('')}</div>`;
-    const oc=lmInCounts(O);
-    const oppInfo=`${L(opp)}’s cards can start on: ${['S','M','L','W'].map(s=>`${symH(s)} <span class="num">${oc[s]}</span>`).join(' · ')} · ✱ <span class="num">${oc['*']}</span>`;
-    if(!ctx.canAct){
-      return `<div class="panel"><p class="status">${st.over?'Game over.':`Waiting for ${L(me)}.`}</p>${thread}</div>
-        <div class="panel"><h3>Market</h3>${marketHTML(LMC,st.supply,0,false,'lmBuy')}</div>`;
-    }
-    let h='';
+    const S=ctx.seat,A=st.turn,L=ctx.label,act=ctx.canAct,P=st.players,me=P[S],O=P[1-S];
+    const total=p=>p.deck.length+p.discard.length+p.hand.length;
+    const v={oppInfo:`${total(O)} cards · hand ${O.hand.length}`,meInfo:`${total(me)} cards`,arena:'',hand:'',actions:'',prompt:''};
+    const cur=lmCur(st);
+    v.arena=`<div class="loom">${threadHTML(st,L)}<div class="loom-row">${meterHTML(st.chain.length)}<span class="chip gold">${st.glamour} Glamour</span>${st.vpGained?`<span class="chip">+${st.vpGained} ★</span>`:''}</div></div>`;
+    if(st.over)return v;
+    const preview=()=>`<div class="peek-label">Your next hand</div>`+handHTML(me.hand.map(k=>({def:LMC[k],o:{cls:'peek'}})));
     if(st.phase==='weave'){
-      const cur=lmCur(st),first=!st.chain.length;
-      h+=`<div class="panel"><div class="spread"><h3>Weave from ${symH(cur)}</h3><span class="muted">Glamour <b class="num">${st.glamour}</b> · ★ this turn <b class="num">${st.vpGained}</b> · thread bonus <b class="num">+${lmBonus(st.chain.length)}</b></span></div>${thread}`;
-      if(st.pending!=null){
-        h+=`<div class="row"><span>Choose the outgoing symbol for ${LMC[P.hand[st.pending]].n}:</span>${['S','M','L','W'].map(s=>`<button class="btn small" data-a="lmOut" data-i="${s}" aria-label="${SYMNAME[s]}">${symH(s)}</button>`).join('')}<button class="btn ghost small" data-a="lmCancel">Cancel</button></div>`;
-      }
-      h+=`<div class="cards">${P.hand.map((k,i)=>{
+      if(act){
+        const first=!st.chain.length;
+        v.prompt=`Weave from ${symH(cur)}. Each card must match the last symbol.`;
+        v.hand=handHTML(me.hand.map((k,i)=>{
           const c=LMC[k],ok=lmMatch(c,cur),can=ok||first;
-          return cardHTML(c,{btn:true,disabled:!can||st.pending!=null,cls:ok?'hot':can?'':'dim',face:c.face,attrs:`data-a="lmPlay" data-i="${i}"`,foot:!ok&&first?'<span class="left">Restart: no effect</span>':''});
-        }).join('')||'<p class="muted">No cards left in hand.</p>'}</div>
-        <div class="row"><button class="btn primary" data-a="lmFinish">Finish thread</button><span class="muted">Ending on ${symH(cur)}. ${oppInfo}</span></div></div>`;
+          return {def:c,o:{btn:true,disabled:!can||st.pending!=null,cls:ok?'glow':can?'restart':'dim',attrs:`data-a="lmPlay" data-i="${i}"`,foot:!ok&&first?'Restart: no effect':''}};
+        }))||'<p class="empty">No cards left in hand.</p>';
+        const oc=lmInCounts(O);
+        v.actions=`<span class="hint">${L(1-S)} can start on ${['S','M','L','W'].map(s=>`${symH(s)}${oc[s]}`).join(' ')} ✱${oc['*']}</span><button class="btn primary big" data-a="lmFinish">Finish thread</button>`;
+        if(st.pending!=null){
+          v.arena+=`<div class="picker"><span>Choose where ${LMC[me.hand[st.pending]].n} leads:</span>${['S','M','L','W'].map(s=>`<button class="bead ${s}" data-a="lmOut" data-i="${s}" aria-label="${SYMNAME[s]}">${SYM[s]}</button>`).join('')}<button class="btn small" data-a="lmCancel">Cancel</button></div>`;
+        }
+      }else{
+        v.prompt=`${L(A)} is weaving from ${symH(cur)}.`;
+        v.hand=preview();
+      }
     }else{
-      h+=`<div class="panel"><div class="spread"><div><div class="label">Glamour to spend</div><div class="big">${st.glamour}</div></div>
-        <div class="row">${st.bought.length?`<span class="muted">Bought: ${st.bought.map(k=>LMC[k].n).join(', ')}</span>`:''}<button class="btn primary" data-a="lmEnd">End turn</button></div></div>${thread}
-        ${marketHTML(LMC,st.supply,st.glamour,true,'lmBuy')}</div>`;
+      v.prompt=act?'Spend your Glamour on new threads.':`${L(A)} is shopping.`;
+      v.arena+=shopHTML(LMC,st.supply,st.glamour,act,'lmBuy');
+      if(act)v.actions=`<button class="btn primary big" data-a="lmEnd">End turn</button>`;
+      v.hand=preview();
     }
-    return h;
+    return v;
   },
   on:{
     lmPlay(st,i){
       i=+i;const P=st.players[st.turn],c=LMC[P.hand[i]];
       if(!lmMatch(c,lmCur(st))&&st.chain.length)return;
-      if(c.out==='*'){st.pending=i;return}
+      if(c.out==='*'){st.pending=i;sfx('tap');return}
       lmApply(st,i,null);
     },
     lmOut(st,s){if(st.pending==null)return;const i=st.pending;st.pending=null;lmApply(st,i,s)},
     lmCancel(st){st.pending=null},
     lmFinish(st,_,ctx){
       const P=st.players[st.turn],b=lmBonus(st.chain.length);P.score+=b;
+      if(b){pop(st.turn,`Thread bonus +${b} ★`);sfx('score')}
       st.log.push(`${ctx.label(st.turn)} wove ${st.chain.length} card${st.chain.length===1?'':'s'} for ${st.glamour} Glamour and ${st.vpGained+b} ★${b?` (thread bonus ${b})`:''}${st.chain.length?`, ending on ${SYM[lmCur(st)]}`:''}.`);
       st.pending=null;st.phase='buy';
     },
     lmBuy(st,key){
       const c=LMC[key];if(st.glamour<c.cost||!st.supply[key])return;
-      st.glamour-=c.cost;st.supply[key]--;st.players[st.turn].discard.push(key);st.bought.push(key);
+      st.glamour-=c.cost;st.supply[key]--;st.players[st.turn].discard.push(key);st.bought.push(key);sfx('card');
       if(st.supply.master===0||emptyPiles(st.supply)>=2)st.endTriggered=true;
     },
     lmEnd(st,_,ctx){
@@ -152,10 +172,12 @@ const GAME={
         if(last.k==='snarl'&&!last.dead&&O.hand.length){
           const lost=O.hand.splice(rnd(O.hand.length),1)[0];O.discard.push(lost);
           st.log.push(`Snarl: ${ctx.label(1-me)} loses ${LMC[lost].n} from their next hand.`);
+          pop(1-me,'Snarled!','bad');
         }
       }
       P.discard.push(...P.hand,...st.chain.map(x=>x.k));P.hand=draw(P,5);
       Object.assign(st,{chain:[],glamour:0,vpGained:0,bought:[],pending:null,phase:'weave'});
+      sfx('tap');
       return passTurn(st,14);
     },
   },

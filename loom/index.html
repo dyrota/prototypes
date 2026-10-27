@@ -4,121 +4,242 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
-/* Layout: one column card table: lobby (play options, rules, games) then a board per game. */
+/* Layout: a game table. Title screen menu; in game, opponent plate on top, the play area in the middle,
+   and a sticky bottom with your plate, actions and fanned hand. Each game commits to one dark theme. */
 :root{
-  --bg:#E9EEEA; --surface:#F8FAF7; --surface2:#FFFFFF; --ink:#1B2320; --muted:#5A6661; --line:#C9D3CD;
-  --accent:#2D5E8C; --accent-ink:#FFFFFF; --good:#2E7D4F; --bad:#B0413E;
-  --ff:#7B4FA3; --lm:#1E7A70; --rl:#A0640F;
-  --pA:#2D5E8C; --pB:#A0640F;
-  --sS:#B9800A; --sM:#5463B5; --sL:#3A8747; --sW:#23809F;
-  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-  --body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme:dark;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --cw:120px; --cws:100px; --cwm:96px;
+  --display:"Young Serif",Georgia,serif;
+  --bg1:#18404A;--bg2:#06171B;--panel:rgba(233,220,195,.05);--panel2:rgba(233,220,195,.09);--line:rgba(233,220,195,.2);
+  --ink:#EEF3EF;--muted:#9DB6B2;--accent:#E9CF98;--accent-ink:#13292E;--c:#5CC4B7;--good:#86D6A0;--bad:#EE8A7E;
+  --card:#F4EDDE;--card-ink:#1B2B2F;--card-muted:#55666A;--k1:#5A7A81;--k2:#2A8A7E;--k3:#B57F25;--k4:#91508A;--k5:#B57F25;
+  --thread:#D9564B;--sS:#E0A92E;--sM:#7F8CE8;--sL:#4FAE64;--sW:#3BA9CF;
+  --tex:repeating-linear-gradient(0deg,rgba(233,220,195,.04) 0 2px,transparent 2px 7px),repeating-linear-gradient(90deg,rgba(233,220,195,.04) 0 2px,transparent 2px 7px);
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#111715; --surface:#19211E; --surface2:#202A26; --ink:#E4EBE7; --muted:#97A49E; --line:#2E3934;
-  --accent:#86AEDB; --accent-ink:#0E1A26; --good:#6CC08E; --bad:#E58A86;
-  --ff:#BB98DD; --lm:#5CC4B7; --rl:#E2A64E; --pA:#86AEDB; --pB:#E2A64E;
-  --sS:#E3B23C; --sM:#9AA6F0; --sL:#79C487; --sW:#62BFDD; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#111715; --surface:#19211E; --surface2:#202A26; --ink:#E4EBE7; --muted:#97A49E; --line:#2E3934;
-  --accent:#86AEDB; --accent-ink:#0E1A26; --good:#6CC08E; --bad:#E58A86;
-  --ff:#BB98DD; --lm:#5CC4B7; --rl:#E2A64E; --pA:#86AEDB; --pB:#E2A64E;
-  --sS:#E3B23C; --sM:#9AA6F0; --sL:#79C487; --sW:#62BFDD; color-scheme:dark}
+@media (max-width:640px){:root{--cw:84px;--cws:74px;--cwm:76px}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
-#app{--c:var(--lm);max-width:1080px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
-h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
-h1{font-size:clamp(32px,6vw,48px);font-weight:700;letter-spacing:-.01em;color:var(--c)}
-h2{font-size:22px;font-weight:700}
-h3{font-size:16px;font-weight:700}
+html,body{height:100%}
+body{margin:0;background:var(--bg2);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+#app{min-height:100%;position:relative;background:radial-gradient(120% 90% at 50% 0%,var(--bg1),var(--bg2) 72%) fixed}
+#app::before{content:"";position:fixed;inset:0;pointer-events:none;background:var(--tex);opacity:.9}
+#app>*:not(.overlay){position:relative}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.1;text-wrap:balance;font-weight:700}
+h2{font-size:26px;color:var(--accent)}
+h3{font-size:17px;margin-top:4px}
 p{margin:0}
 a{color:var(--accent)}
-.muted{color:var(--muted)}
-.mono,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
-.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.muted{color:var(--muted)} .gold{color:var(--accent)}
 button{font:inherit;color:inherit;cursor:pointer}
-button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.btn{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 14px;font-weight:700}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:12px;padding:9px 16px;font-weight:700;display:inline-flex;flex-direction:column;align-items:center;gap:1px;transition:transform .08s,box-shadow .08s,border-color .12s}
 .btn:hover{border-color:var(--accent)}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn small{font-family:var(--body);font-size:12px;font-weight:400;opacity:.8}
+.btn.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--accent),white 18%),var(--accent));color:var(--accent-ink);border-color:transparent;box-shadow:0 4px 0 color-mix(in srgb,var(--accent),black 45%),0 10px 20px rgba(0,0,0,.35)}
+.btn.primary:active{transform:translateY(3px);box-shadow:0 1px 0 color-mix(in srgb,var(--accent),black 45%)}
+.btn.big{font-family:var(--display);font-size:18px;padding:12px 24px}
+.btn.small{padding:5px 11px;font-size:13px;border-radius:9px}
 .btn.ghost{background:transparent}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.btn.small{padding:4px 10px;font-size:13px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;font-weight:700}
+.icon{width:40px;height:40px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--panel2);display:grid;place-items:center;color:var(--ink)}
+.icon svg{width:19px;height:19px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);white-space:nowrap}
+.chip.gold{color:var(--accent);border-color:color-mix(in srgb,var(--accent),transparent 50%)}
+.chip.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad),transparent 50%)}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.row.center{justify-content:center}
 .spread{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
-.intro{display:flex;flex-direction:column;gap:8px;max-width:68ch;padding-top:4px}
-.intro .hook{font-size:18px}
-.back{font-size:13px;font-weight:700;text-decoration:none}
-.mode{font-size:13px;color:var(--muted)}
-.mode b{color:var(--ink)}
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
-ol,ul.rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
-.watch{border-left:3px solid var(--c);padding-left:10px}
-.glist{display:flex;flex-direction:column;gap:8px}
-.gitem{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.gitem .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
-.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
-.pill.go{background:var(--good);color:var(--surface2);border-color:var(--good)}
-.pill.wait{color:var(--muted)}
-.pill.done{color:var(--muted);border-style:dashed}
-.gbar{border-top:6px solid var(--c)}
-.seats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.seat{border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface2)}
-.seat.on{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}
-.seat .score{font-family:var(--mono);font-size:20px}
-.status{font-weight:700}
-details.rules summary{cursor:pointer;font-weight:700}
-details.rules ul{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
-.board{display:flex;flex-direction:column;gap:16px}
-.handoff{align-items:flex-start;padding-block:40px;border-top:6px solid var(--c)}
-.cards{display:flex;flex-wrap:wrap;gap:10px}
-.card{width:136px;min-height:150px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);padding:9px 10px;display:flex;flex-direction:column;gap:6px;text-align:left;position:relative}
-button.card:hover:not(:disabled){border-color:var(--accent)}
+
+/* title screen */
+.title{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding-block:40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow:hidden}
+.title-inner{position:relative;display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center;max-width:560px;z-index:1}
+.logo{font-size:clamp(58px,14vw,120px);line-height:.9;color:var(--accent);letter-spacing:.01em;text-shadow:0 0 50px color-mix(in srgb,var(--c),transparent 40%),0 5px 0 rgba(0,0,0,.45);animation:float 7s ease-in-out infinite}
+.tag{font-size:18px;color:var(--muted);max-width:36ch}
+.menu{display:flex;flex-direction:column;gap:12px;width:min(340px,100%)}
+.menu .btn{width:100%}
+.menu-row{display:flex;gap:10px}.menu-row .btn{flex:1}
+.notice{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-size:14px}
+.foot{font-size:13px;color:var(--muted);max-width:42ch}
+.deco{position:absolute;inset:0;pointer-events:none;display:grid;place-items:center}
+.deco .card{position:absolute;--cw:150px;opacity:.5}
+.deco .d1{transform:translate(-300px,-40px) rotate(-18deg);animation:float 9s ease-in-out infinite}
+.deco .d2{transform:translate(300px,-110px) rotate(14deg);animation:float 8s ease-in-out -2s infinite}
+.deco .d3{transform:translate(330px,170px) rotate(-6deg);animation:float 10s ease-in-out -4s infinite;opacity:.3}
+@media (max-width:640px){.deco .d1{transform:translate(-120px,-260px) rotate(-18deg)}.deco .d2{transform:translate(120px,-280px) rotate(14deg)}.deco .d3{display:none}}
+
+/* table */
+.stage{min-height:100vh;min-height:100dvh;max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-top:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hud{display:flex;align-items:center;gap:10px}
+.hud .plate{flex:0 1 380px}
+.hud-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.round{font-family:var(--mono);font-size:12.5px;color:var(--muted);padding:5px 10px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+.plate{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:6px 14px 6px 6px;min-width:0;transition:box-shadow .3s,border-color .3s}
+.plate.active{border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 0 26px color-mix(in srgb,var(--c),transparent 55%)}
+.avatar{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-size:19px;background:var(--c);color:var(--bg2)}
+.plate.me .avatar{background:var(--accent);color:var(--accent-ink)}
+.pl-body{min-width:0;flex:1}
+.pl-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-info{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-score{display:flex;align-items:baseline;gap:3px;font-family:var(--mono)}
+.pl-score b{font-size:26px;color:var(--accent);line-height:1}
+.prompt{text-align:center;font-family:var(--display);font-size:clamp(18px,2.6vw,24px);padding:6px 8px 0;text-wrap:balance;min-height:1.6em}
+.prompt .muted{font-family:var(--body);font-size:14px}
+.prompt.new{animation:slidein .35s ease-out}
+.arena{flex:1;display:flex;flex-direction:column;align-items:center;gap:14px;padding-block:6px 12px}
+.bottom{position:sticky;bottom:0;z-index:5;display:flex;flex-direction:column;gap:6px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px));background:linear-gradient(to top,var(--bg2) 55%,color-mix(in srgb,var(--bg2),transparent 100%))}
+.tray{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:14px}
+.tray .plate{flex:0 1 320px}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-left:auto;justify-content:flex-end}
+.hint{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
+.hand{display:flex;justify-content:center;align-items:flex-end;min-height:calc(var(--cw)*1.05);padding:16px 0 4px;flex-wrap:nowrap}
+.hand .card{margin-left:calc(var(--cw)*-.14);transform:translateY(var(--y,0px)) rotate(var(--r,0deg));transform-origin:50% 130%;transition:transform .15s,box-shadow .15s}
+.hand .card:first-child{margin-left:0}
+.hand button.card:not(:disabled):hover,.hand button.card:not(:disabled):focus-visible{transform:translateY(calc(var(--y,0px) - 22px)) rotate(0deg) scale(1.07);z-index:3}
+.hand .peek{opacity:.75}
+.peek-label{position:absolute;top:-2px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hand{position:relative}
+.empty{color:var(--muted);font-size:13px;align-self:center;text-align:center}
+.sub{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+/* cards */
+.card{--kc:var(--k1);width:var(--cw);aspect-ratio:5/7;flex:none;background:var(--card);color:var(--card-ink);border-radius:calc(var(--cw)*.08);border:2px solid var(--kc);
+  box-shadow:0 2px 0 rgba(0,0,0,.25),0 10px 20px rgba(0,0,0,.45);padding:calc(var(--cw)*.055);display:flex;flex-direction:column;gap:calc(var(--cw)*.03);text-align:left;position:relative;overflow:hidden;font-family:var(--body)}
+.k-a{--kc:var(--k1)} .k-b{--kc:var(--k2)} .k-c{--kc:var(--k3)} .k-d{--kc:var(--k4)} .k-e{--kc:var(--k5)}
+.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:4px}
+.cname{font-family:var(--display);font-size:calc(var(--cw)*.112);line-height:1.05;font-weight:700}
+.gem{flex:none;width:calc(var(--cw)*.21);height:calc(var(--cw)*.21);border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-family:var(--mono);font-size:calc(var(--cw)*.12);font-weight:700;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+.cart{flex:1 1 42%;min-height:0;border-radius:calc(var(--cw)*.05);background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--kc),white 35%),var(--kc) 75%);display:flex;align-items:center;justify-content:center;gap:6px;color:#fff;position:relative}
+.glyph{font-size:calc(var(--cw)*.34);line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.28)}
+.might{position:absolute;bottom:3px;right:5px;font-family:var(--mono);font-weight:700;font-size:calc(var(--cw)*.12);text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.ctext{font-size:calc(var(--cw)*.087);line-height:1.2;color:var(--card-muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical}
+.cfoot{font-size:calc(var(--cw)*.085);font-weight:700;color:var(--bad)}
+.badge{position:absolute;bottom:5px;right:5px;background:var(--card-ink);color:var(--card);font-family:var(--mono);font-size:11px;border-radius:999px;padding:0 6px}
+.card.sm{--cw:var(--cws)} .card.mini{--cw:var(--cwm)}
+.card.back{background:radial-gradient(circle at 50% 50%,color-mix(in srgb,var(--accent),transparent 30%) 0 14%,transparent 15%),repeating-linear-gradient(45deg,var(--c) 0 7px,color-mix(in srgb,var(--c),black 35%) 7px 14px);border-color:var(--accent)}
+.card.back.none{opacity:.25}
+button.card{cursor:pointer;transition:transform .15s,box-shadow .15s,filter .15s}
 button.card:disabled{cursor:default}
-.card .top{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
-.card .nm{font-family:var(--display);font-weight:700;font-size:15px;line-height:1.15}
-.card .cost{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:6px;padding:0 6px;white-space:nowrap}
-.card .tx{font-size:12.5px;color:var(--muted);line-height:1.35}
-.card .stat{font-family:var(--mono);font-size:13px;margin-top:auto}
-.card.dim{opacity:.4}
-.card.hot{border-color:var(--good);box-shadow:inset 0 0 0 1px var(--good)}
-.card.pA{border-top:5px solid var(--pA)}
-.card.pB{border-top:5px solid var(--pB)}
-.card .left{font-size:11px;color:var(--muted)}
-.cards.mini .card{width:112px;min-height:0}
-.piles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.pile{border:2px dashed var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.pile.A{border-color:var(--pA)} .pile.B{border-color:var(--pB)}
-.pile h3.A{color:var(--pA)} .pile h3.B{color:var(--pB)}
-.calc{font-size:13px;color:var(--muted)}
-.calc b{color:var(--ink);font-family:var(--mono)}
-.big{font-family:var(--mono);font-size:26px;line-height:1}
-.mkt{display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:10px}
-.mkt .card{width:auto}
-.sym{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;font-size:16px;color:#fff;font-weight:700;line-height:1}
-.sym.S{background:var(--sS)} .sym.M{background:var(--sM)} .sym.L{background:var(--sL)} .sym.W{background:var(--sW)}
-.sym.any{background:transparent;color:var(--ink);border:1.5px dashed var(--muted);font-size:13px}
-.weave{display:flex;align-items:center;gap:6px;font-family:var(--mono);color:var(--muted)}
-.thread{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);min-height:52px}
-.knot{display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);font-size:13px}
-.knot.dead{opacity:.5;text-decoration:line-through}
-.ladder{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.rung{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;background:var(--surface2);display:flex;flex-direction:column;gap:2px}
-.rung.now{border-color:var(--c);box-shadow:inset 0 0 0 2px var(--c)}
-.rung .r{display:flex;gap:6px}
-.res{font-family:var(--mono);font-size:12px;padding:0 5px;border-radius:4px}
-.res.W{color:var(--good);border:1px solid var(--good)} .res.L{color:var(--bad);border:1px solid var(--bad)}
-.log{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;z-index:20;max-width:calc(100% - 32px)}
-.ok{color:var(--good)} .no{color:var(--bad)}
-@media (max-width:560px){.piles,.seats{grid-template-columns:1fr}.card{width:calc(50% - 5px)}.gitem{grid-template-columns:auto 1fr}.gitem .row{grid-column:1/-1}}
-@media (prefers-reduced-motion:no-preference){.card{transition:border-color .12s, box-shadow .12s}}
+.card.dim{filter:grayscale(.75) brightness(.6)}
+.card.gone{opacity:.35}
+.card.glow{box-shadow:0 0 0 2px var(--good),0 0 20px color-mix(in srgb,var(--good),transparent 45%),0 10px 20px rgba(0,0,0,.45)}
+.card.restart{box-shadow:0 0 0 2px var(--accent),0 10px 20px rgba(0,0,0,.45)}
+.shop button.card:not(:disabled):hover,.spoils button.card:hover,.pile button.card:hover{transform:translateY(-6px) scale(1.04)}
+.banishable:hover{box-shadow:0 0 0 3px var(--bad),0 0 20px color-mix(in srgb,var(--bad),transparent 40%)!important;transform:translateY(-6px) rotate(-3deg)}
+.card.deal{animation:deal .5s cubic-bezier(.2,.9,.3,1.25) both;animation-delay:calc(var(--i,0)*70ms)}
+.stacks{display:flex;gap:22px;justify-content:center;align-items:flex-end}
+.stack{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.stack .card{--cw:54px}
+.stack b{color:var(--ink);font-family:var(--mono)}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--cwm),1fr));gap:14px 10px;width:100%;justify-items:center;padding:14px;border-radius:18px;background:var(--panel);border:1px solid var(--line)}
+.purse{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;justify-content:center}
+.purse-n{font-family:var(--display);font-size:60px;color:var(--accent);line-height:1}
+.purse-l{font-family:var(--display);font-size:20px}
+
+/* Fair Folk piles */
+.piles{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%}
+.pile{--pc:var(--pa);border:2px dashed var(--pc);border-radius:18px;padding:14px 12px;display:flex;flex-direction:column;gap:12px;align-items:center;background:color-mix(in srgb,var(--pc),transparent 92%);min-width:0}
+.pile.pB{--pc:var(--pb)}
+.pile-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.pile-name{font-family:var(--display);font-size:22px;color:var(--pc)}
+.pile-cards{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;min-height:calc(var(--cws)*1.4)}
+
+/* Loom thread */
+.loom{width:100%;display:flex;flex-direction:column;gap:12px;align-items:center}
+.thread{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;row-gap:30px;padding:22px 14px 32px;border-radius:18px;background:var(--panel);border:1px solid var(--line);width:100%;min-height:110px}
+.bead,.sym,.fb{--bc:var(--muted);border-radius:50%;display:inline-grid;place-items:center;color:#fff;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--bc),white 35%),var(--bc) 70%);box-shadow:inset 0 -3px 0 rgba(0,0,0,.25),0 3px 8px rgba(0,0,0,.35);flex:none;line-height:1}
+.S{--bc:var(--sS)} .M{--bc:var(--sM)} .L{--bc:var(--sL)} .W{--bc:var(--sW)}
+.bead{width:50px;height:50px;font-size:24px;position:relative;border:0}
+.bead small{position:absolute;top:100%;margin-top:6px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.bead.start{outline:2px dashed var(--muted);outline-offset:4px}
+.bead.end{box-shadow:0 0 0 3px var(--accent),0 0 26px var(--accent)}
+.bead.dead{filter:grayscale(1);opacity:.55}
+.bead.new{animation:beadpop .45s cubic-bezier(.2,.9,.3,1.4)}
+.link{width:30px;height:5px;background:var(--thread);border-radius:3px;flex:none;box-shadow:0 0 8px color-mix(in srgb,var(--thread),transparent 50%)}
+.link.dead{background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 8px);box-shadow:none}
+.sym{width:24px;height:24px;font-size:13px;vertical-align:middle}
+.sym.any,.fb.any{background:transparent;color:var(--ink);border:1.5px dashed var(--muted);box-shadow:none}
+.links-face{display:flex;align-items:center;gap:calc(var(--cw)*.04)}
+.fb{width:calc(var(--cw)*.3);height:calc(var(--cw)*.3);font-size:calc(var(--cw)*.17)}
+.fb.any{color:#fff;border-color:rgba(255,255,255,.7)}
+.arrow{color:#fff;font-size:calc(var(--cw)*.13);text-shadow:0 1px 0 rgba(0,0,0,.3)}
+.loom-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.meter{display:flex;gap:4px}
+.notch{width:30px;height:16px;border-radius:4px;background:var(--panel2);border:1px solid var(--line);font-size:9.5px;display:grid;place-items:center;font-family:var(--mono)}
+.notch.on{background:var(--thread);border-color:var(--thread)}
+.notch.b{border-color:var(--accent);color:var(--accent)} .notch.b.on{color:#fff}
+.picker{display:flex;gap:12px;padding:14px 18px;background:var(--bg1);border:1px solid var(--accent);border-radius:18px;align-items:center;flex-wrap:wrap;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,.5);animation:slidein .25s ease-out}
+.picker .bead{cursor:pointer}
+.picker .bead:hover{transform:scale(1.12)}
+
+/* Relay */
+.track{display:flex;gap:5px;width:100%;justify-content:center;flex-wrap:wrap}
+.node{width:44px;padding:4px 0 5px;border-radius:10px;border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--mono);font-size:11px}
+.node.now{border-color:var(--accent);background:color-mix(in srgb,var(--accent),transparent 85%);box-shadow:0 0 14px color-mix(in srgb,var(--accent),transparent 50%)}
+.node.past{opacity:.75}
+.marks{display:flex;gap:3px;min-height:14px}
+.mk{width:14px;height:14px;border-radius:3px;font-size:9px;display:grid;place-items:center;font-weight:700;color:#111}
+.mk.W{background:var(--good)} .mk.L{background:var(--bad)} .mk.opp{border-radius:50%}
+.battle{display:flex;gap:28px;align-items:center;justify-content:center;flex-wrap:wrap;width:100%}
+.foe{width:min(230px,64vw);aspect-ratio:5/6;border-radius:20px;background:radial-gradient(circle at 50% 32%,color-mix(in srgb,var(--c),var(--bg1) 45%),var(--bg2) 80%);border:2px solid color-mix(in srgb,var(--c),transparent 40%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 14px 34px rgba(0,0,0,.55),inset 0 0 40px rgba(0,0,0,.4);text-align:center;padding:14px}
+.foe-art{font-size:84px;line-height:1;color:var(--ink);filter:drop-shadow(0 4px 0 rgba(0,0,0,.45))}
+.foe-name{font-family:var(--display);font-size:30px;line-height:1}
+.foe-stats{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.foe.hit{animation:hit .5s}
+.foe.roar{animation:roar .6s}
+.result{display:flex;flex-direction:column;align-items:center;gap:6px;animation:slidein .4s ease-out}
+.result .rt{font-family:var(--display);font-size:clamp(44px,8vw,64px);line-height:1}
+.result.win .rt{color:var(--good)} .result.loss .rt{color:var(--bad)}
+.result .rm{font-family:var(--mono);font-size:22px}
+.line,.spoils{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:grid;place-items:center;padding:16px;animation:fade .2s}
+.modal{background:var(--bg1);border:1px solid var(--line);border-radius:20px;max-width:580px;width:100%;max-height:calc(100% - 16px);overflow:auto;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-align:left}
+.modal.center{align-items:center;text-align:center;gap:16px}
+.modal ol,.modal ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px}
+.modal .lead{font-size:17px}
+.watch{border-left:3px solid var(--c);padding-left:12px;color:var(--muted)}
+.end-title{font-family:var(--display);font-size:clamp(48px,11vw,80px);color:var(--accent);line-height:1;animation:beadpop .6s cubic-bezier(.2,.9,.3,1.3)}
+.end-scores{display:flex;gap:28px}
+.end-scores div{display:flex;flex-direction:column;align-items:center}
+.end-scores b{font-family:var(--mono);font-size:30px}
+.log{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:3px;max-height:200px;overflow:auto}
+.glist{display:flex;flex-direction:column;gap:8px}
+.gitem{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.pill{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.pill.go{background:var(--good);color:#111;border-color:var(--good)}
+.pill.wait{color:var(--muted)} .pill.done{color:var(--muted);border-style:dashed}
+.pop{position:fixed;z-index:40;pointer-events:none;font-family:var(--display);font-size:24px;color:var(--accent);text-shadow:0 2px 8px rgba(0,0,0,.7);white-space:nowrap;animation:popup 1.4s ease-out forwards}
+.pop.bad{color:var(--bad)} .pop.good{color:var(--good)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg2);padding:10px 16px;border-radius:12px;font-weight:700;z-index:50;max-width:calc(100% - 32px)}
+
+@keyframes deal{from{opacity:0;transform:translateY(90px) rotate(-14deg) scale(.7)}}
+@keyframes slidein{from{opacity:0;transform:translateY(-8px)}}
+@keyframes beadpop{0%{transform:scale(.2)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes popup{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-70%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-190%)}}
+@keyframes float{0%,100%{translate:0 0}50%{translate:0 -10px}}
+@keyframes hit{0%,100%{transform:none}20%{transform:translateX(-10px) rotate(-3deg)}40%{transform:translateX(10px) rotate(3deg)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@keyframes roar{0%,100%{transform:none}30%{transform:scale(1.08)}}
+@keyframes fade{from{opacity:0}}
+@media (max-width:640px){
+  .piles{grid-template-columns:1fr}
+  .hud .plate{flex:1}
+  .round{display:none}
+  .tray .plate{flex:1 1 100%}
+  .actions{margin-left:0;width:100%;justify-content:center}
+  .bead{width:42px;height:42px;font-size:20px}
+  .link{width:18px}
+  .foe-art{font-size:64px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}}
 </style>
-<div id="app"><p class="muted">Loading…</p></div>
+<div id="app"></div>
 <script>
 // ---------- shared helpers (used by every game engine and the shell) ----------
 const rnd=n=>Math.floor(Math.random()*n);
@@ -129,6 +250,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const clean=s=>String(s).replace(/[<>&"']/g,'');
 const newId=()=>'g'+Math.random().toString(36).slice(2,10);
 const emptyPiles=s=>Object.values(s).filter(v=>v===0).length;
+const T='︎'; // text presentation, so glyphs never render as emoji
 
 function draw(p,n){
   const out=[];
@@ -145,6 +267,34 @@ function passTurn(st,maxRounds){
   return 'commit';
 }
 
+// ---------- effects: one-shot animation flags, floating pop-ups, sounds ----------
+// Handlers set these; the shell consumes them after the next render.
+const FX={pops:[],deal:false,bead:false,fight:false};
+function pop(seat,text,kind){FX.pops.push({seat,text,kind:kind||''})}
+let MUTED=false,AC=null;
+const SOUNDS={
+  tap:[[700,.03,'triangle']],
+  card:[[520,.05,'triangle'],[310,.05,'triangle']],
+  coin:[[988,.06],[1319,.1]],
+  score:[[523,.08],[659,.08],[784,.14]],
+  bad:[[196,.16,'sawtooth'],[147,.22,'sawtooth']],
+  win:[[523,.1],[659,.1],[784,.1],[1047,.3]],
+  lose:[[392,.16],[330,.16],[262,.32]],
+};
+function sfx(name){
+  if(MUTED||typeof window==='undefined')return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended')AC.resume();
+    let t=AC.currentTime;
+    for(const [f,d,type] of SOUNDS[name]||[]){
+      const o=AC.createOscillator(),g=AC.createGain();
+      o.type=type||'sine';o.frequency.value=f;
+      g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.1,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+      o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.8;
+    }
+  }catch(e){}
+}
 let toastTimer;
 function toast(msg){
   if(typeof document==='undefined')return;
@@ -152,25 +302,36 @@ function toast(msg){
   if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}
   t.textContent=msg;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.remove(),3200);
 }
+
+// ---------- card rendering ----------
+const stripTags=s=>String(s).replace(/<[^>]+>/g,'');
 function cardHTML(def,o={}){
   const tag=o.btn?'button':'div';
-  return `<${tag} class="card ${o.cls||''}" ${o.attrs||''} ${o.btn&&o.disabled?'disabled':''}>
-    <div class="top"><span class="nm">${def.n}</span>${def.cost?`<span class="cost">${def.cost}</span>`:''}</div>
-    ${o.face||''}<div class="tx">${def.txt||''}</div>${o.foot?`<div class="stat">${o.foot}</div>`:''}</${tag}>`;
+  return `<${tag} class="card k-${def.kind||'a'} ${o.cls||''}"${o.style?` style="${o.style}"`:''} ${o.attrs||''} ${o.btn&&o.disabled?'disabled':''} title="${esc(def.n+(def.txt?': '+stripTags(def.txt):''))}">
+    <div class="chead"><span class="cname">${def.n}</span>${def.cost?`<span class="gem">${def.cost}</span>`:''}</div>
+    <div class="cart">${o.face||def.face||`<span class="glyph">${def.art||''}</span>`}</div>
+    <div class="ctext">${def.txt||''}</div>
+    ${o.foot?`<div class="cfoot">${o.foot}</div>`:''}${o.badge!=null?`<span class="badge">${o.badge}</span>`:''}</${tag}>`;
 }
-function marketHTML(defs,supply,glam,canAct,action){
-  return `<div class="mkt">${Object.keys(supply).map(k=>{
+// Fan position for card i of n in a hand.
+function fanStyle(i,n){const d=i-(n-1)/2;return `--i:${i};--r:${(d*3.5).toFixed(1)}deg;--y:${(Math.pow(Math.abs(d),1.7)*4).toFixed(1)}px`}
+function handHTML(items){
+  return items.map((it,i)=>cardHTML(it.def,{...it.o,cls:`${(it.o&&it.o.cls)||''}${FX.deal?' deal':''}`,style:fanStyle(i,items.length)})).join('');
+}
+const backsHTML=n=>Array.from({length:n},(_,i)=>`<div class="card back${FX.deal?' deal':''}" style="${fanStyle(i,n)}"></div>`).join('');
+const stackHTML=(label,n)=>`<div class="stack"><div class="card back${n?'':' none'}"></div><span>${label} <b>${n}</b></span></div>`;
+function shopHTML(defs,supply,glam,canAct,action){
+  return `<div class="shop">${Object.keys(supply).map(k=>{
     const d=defs[k],ok=canAct&&supply[k]>0&&glam>=d.cost;
-    return cardHTML(d,{btn:true,disabled:!ok,cls:ok?'':'dim',face:d.face||'',
-      attrs:`data-a="${action}" data-i="${k}" aria-label="Buy ${d.n} for ${d.cost}"`,
-      foot:`<span class="left">${supply[k]} left</span>`});
+    return cardHTML(d,{btn:true,disabled:!ok,cls:`mini${ok?' glow':supply[k]?'':' gone'}${canAct&&!ok?' dim':''}`,badge:`×${supply[k]}`,
+      attrs:`data-a="${action}" data-i="${k}" aria-label="Buy ${d.n} for ${d.cost}"`});
   }).join('')}</div>`;
 }
 
 // =====================================================================
 // LOOM: each card is a link; you continue the thread your opponent left.
 // =====================================================================
-const SYM={S:'☀',M:'☾',L:'❦',W:'≈'};
+const SYM={S:'☼',M:'☾'+T,L:'❦'+T,W:'≈'};
 const SYMNAME={S:'Sun',M:'Moon',L:'Leaf',W:'Wave'};
 const symH=s=>s==='*'?'<span class="sym any" title="any symbol">✱</span>'
   :s==='='?'<span class="sym any" title="same as incoming">=</span>'
@@ -179,26 +340,28 @@ const LMC={
   spSM:{n:'Spindle',in:'S',out:'M',g:1},spML:{n:'Spindle',in:'M',out:'L',g:1},spLW:{n:'Spindle',in:'L',out:'W',g:1},spWS:{n:'Spindle',in:'W',out:'S',g:1},
   spSL:{n:'Spindle',in:'S',out:'L',g:1},spMW:{n:'Spindle',in:'M',out:'W',g:1},spLS:{n:'Spindle',in:'L',out:'S',g:1},spWM:{n:'Spindle',in:'W',out:'M',g:1},
   knot:{n:'Knot',in:'*',out:'=',g:0,txt:'Matches anything and passes the symbol through.'},
-  silk:{n:'Silk',cost:2,in:'S',out:'M',g:2},
-  copper:{n:'Copper Thread',cost:2,in:'M',out:'W',g:2},
-  silver:{n:'Silver Thread',cost:2,in:'W',out:'L',g:2},
-  moss:{n:'Moss Thread',cost:2,in:'L',out:'S',g:2},
-  bobbin:{n:'Bobbin',cost:3,in:'M',out:'S',g:0,draw:1,txt:'Draw 1 card.'},
-  shuttle:{n:'Shuttle',cost:3,in:'L',out:'W',g:0,draw:1,txt:'Draw 1 card.'},
-  snarl:{n:'Snarl',cost:3,in:'S',out:'W',g:1,txt:'If your thread ends on this, your opponent loses a random card from their next hand.'},
-  gold:{n:'Gold Thread',cost:4,in:'*',out:'=',g:2,txt:'Matches anything and passes the symbol through.'},
-  mark:{n:'Weaver’s Mark',cost:4,in:'*',out:'*',g:1,txt:'Matches anything. You choose the outgoing symbol.'},
-  tapestry:{n:'Tapestry',cost:5,in:'W',out:'S',vp:2},
-  banner:{n:'Banner',cost:5,in:'M',out:'L',vp:2},
-  master:{n:'Masterwork',cost:8,in:'*',out:'*',vp:4,txt:'Matches anything. You choose the outgoing symbol.'},
+  silk:{n:'Silk',cost:2,in:'S',out:'M',g:2,kind:'b'},
+  copper:{n:'Copper Thread',cost:2,in:'M',out:'W',g:2,kind:'b'},
+  silver:{n:'Silver Thread',cost:2,in:'W',out:'L',g:2,kind:'b'},
+  moss:{n:'Moss Thread',cost:2,in:'L',out:'S',g:2,kind:'b'},
+  bobbin:{n:'Bobbin',cost:3,in:'M',out:'S',g:0,draw:1,kind:'d',txt:'Draw 1 card.'},
+  shuttle:{n:'Shuttle',cost:3,in:'L',out:'W',g:0,draw:1,kind:'d',txt:'Draw 1 card.'},
+  snarl:{n:'Snarl',cost:3,in:'S',out:'W',g:1,kind:'d',txt:'If your thread ends on this, your opponent loses a random card from their next hand.'},
+  gold:{n:'Gold Thread',cost:4,in:'*',out:'=',g:2,kind:'d',txt:'Matches anything and passes the symbol through.'},
+  mark:{n:'Weaver’s Mark',cost:4,in:'*',out:'*',g:1,kind:'d',txt:'Matches anything. You choose the outgoing symbol.'},
+  tapestry:{n:'Tapestry',cost:5,in:'W',out:'S',vp:2,kind:'c'},
+  banner:{n:'Banner',cost:5,in:'M',out:'L',vp:2,kind:'c'},
+  master:{n:'Masterwork',cost:8,in:'*',out:'*',vp:4,kind:'c',txt:'Matches anything. You choose the outgoing symbol.'},
 };
+const faceBead=s=>s==='*'?'<span class="fb any">✱</span>':s==='='?'<span class="fb any">=</span>':`<span class="fb ${s}">${SYM[s]}</span>`;
 for(const d of Object.values(LMC)){
   const bits=[];
   if(d.g)bits.push(`+${d.g} Glamour.`);
   if(d.vp)bits.push(`${d.vp} ★ each time you weave it.`);
   if(d.txt)bits.push(d.txt);
   d.txt=bits.join(' ');
-  d.face=`<div class="weave">${symH(d.in)}→${symH(d.out)}</div>`;
+  d.kind=d.kind||'a';
+  d.face=`<div class="links-face">${faceBead(d.in)}<span class="arrow">→</span>${faceBead(d.out)}</div>`;
 }
 const LM_SUPPLY={silk:6,copper:6,silver:6,moss:6,bobbin:5,shuttle:5,snarl:5,gold:5,mark:5,tapestry:6,banner:6,master:4};
 const lmBonus=n=>n>=6?4:n===5?2:n===4?1:0;
@@ -209,11 +372,12 @@ function lmApply(st,i,chosen){
   const match=lmMatch(c,cur),inS=c.in==='*'?cur:c.in;
   const out=c.out==='='?inS:c.out==='*'?chosen:c.out;
   st.chain.push({k:key,out,dead:!match});
+  FX.bead=true;
   if(match){
     st.glamour+=c.g||0;
-    if(c.vp){P.score+=c.vp;st.vpGained+=c.vp}
+    if(c.vp){P.score+=c.vp;st.vpGained+=c.vp;pop(st.turn,`+${c.vp} ★`);sfx('score')}else sfx('card');
     if(c.draw)P.hand.push(...draw(P,c.draw));
-  }
+  }else sfx('tap');
 }
 function lmInCounts(pl){
   const c={S:0,M:0,L:0,W:0,'*':0};
@@ -244,9 +408,19 @@ function lmBotBuy(st){
   const order=['master','tapestry','banner','gold','mark','bobbin','shuttle','snarl','silk','copper','silver','moss'];
   return order.find(k=>s[k]>0&&LMC[k].cost<=g&&(LMC[k].cost>=g-2||g<4));
 }
+function threadHTML(st,L){
+  let h=`<div class="bead start ${st.end}" title="Thread start">${SYM[st.end]}<small>${st.endBy==null?'Start':L(st.endBy)}</small></div>`;
+  st.chain.forEach((x,j)=>{
+    const last=j===st.chain.length-1;
+    h+=`<div class="link${x.dead?' dead':''}"></div><div class="bead ${x.out}${x.dead?' dead':''}${last?' end':''}${last&&FX.bead?' new':''}">${SYM[x.out]}<small>${LMC[x.k].n}</small></div>`;
+  });
+  if(!st.chain.length)h=h.replace('bead start','bead start end');
+  return `<div class="thread">${h}</div>`;
+}
+const meterHTML=n=>`<div class="meter" aria-label="Thread length ${n}">${[1,2,3,4,5,6].map(i=>`<span class="notch${i<=n?' on':''}${i>=4?' b':''}">${i===4?'+1':i===5?'+2':i===6?'+4':''}</span>`).join('')}</div>`;
 
 const GAME={
-  key:'loom',title:'Loom',color:'var(--lm)',
+  key:'loom',title:'Loom',
   hook:'Every card is a link from one symbol to another. You start your turn wherever your opponent left the thread.',
   turn:['Continue the shared thread from the symbol your opponent ended on, matching card to card.','Score Glamour, ★ and a bonus for long threads, then buy.','The symbol you end on is where your opponent must start.'],
   watch:'Do you feel the pull between a long thread and a nasty ending symbol? Do turns fizzle when you inherit a bad symbol?',
@@ -259,6 +433,7 @@ const GAME={
     'Leftover cards are discarded. Draw 5 at the end of your turn.',
     'The game ends after the round in which the Masterworks or any two piles run out, or after round 14.',
   ],
+  maxRounds:14,
   score:(st,i)=>st.players[i].score,
   setup(){
     const starter=['spSM','spML','spLW','spWS','spSL','spMW','spLS','spWM','knot','knot'];
@@ -267,50 +442,56 @@ const GAME={
       bought:[],pending:null,log:['The thread starts on a random symbol.'],over:false,endTriggered:false};
   },
   view(st,ctx){
-    const me=st.turn,opp=1-me,L=ctx.label,P=st.players[me],O=st.players[opp];
-    const thread=`<div class="thread"><span class="label">${st.endBy==null?'Start':`${L(st.endBy)} left`}</span>${symH(st.end)}${st.chain.map(x=>`<span class="muted">→</span><span class="knot ${x.dead?'dead':''}">${LMC[x.k].n} ${symH(x.out)}</span>`).join('')}</div>`;
-    const oc=lmInCounts(O);
-    const oppInfo=`${L(opp)}’s cards can start on: ${['S','M','L','W'].map(s=>`${symH(s)} <span class="num">${oc[s]}</span>`).join(' · ')} · ✱ <span class="num">${oc['*']}</span>`;
-    if(!ctx.canAct){
-      return `<div class="panel"><p class="status">${st.over?'Game over.':`Waiting for ${L(me)}.`}</p>${thread}</div>
-        <div class="panel"><h3>Market</h3>${marketHTML(LMC,st.supply,0,false,'lmBuy')}</div>`;
-    }
-    let h='';
+    const S=ctx.seat,A=st.turn,L=ctx.label,act=ctx.canAct,P=st.players,me=P[S],O=P[1-S];
+    const total=p=>p.deck.length+p.discard.length+p.hand.length;
+    const v={oppInfo:`${total(O)} cards · hand ${O.hand.length}`,meInfo:`${total(me)} cards`,arena:'',hand:'',actions:'',prompt:''};
+    const cur=lmCur(st);
+    v.arena=`<div class="loom">${threadHTML(st,L)}<div class="loom-row">${meterHTML(st.chain.length)}<span class="chip gold">${st.glamour} Glamour</span>${st.vpGained?`<span class="chip">+${st.vpGained} ★</span>`:''}</div></div>`;
+    if(st.over)return v;
+    const preview=()=>`<div class="peek-label">Your next hand</div>`+handHTML(me.hand.map(k=>({def:LMC[k],o:{cls:'peek'}})));
     if(st.phase==='weave'){
-      const cur=lmCur(st),first=!st.chain.length;
-      h+=`<div class="panel"><div class="spread"><h3>Weave from ${symH(cur)}</h3><span class="muted">Glamour <b class="num">${st.glamour}</b> · ★ this turn <b class="num">${st.vpGained}</b> · thread bonus <b class="num">+${lmBonus(st.chain.length)}</b></span></div>${thread}`;
-      if(st.pending!=null){
-        h+=`<div class="row"><span>Choose the outgoing symbol for ${LMC[P.hand[st.pending]].n}:</span>${['S','M','L','W'].map(s=>`<button class="btn small" data-a="lmOut" data-i="${s}" aria-label="${SYMNAME[s]}">${symH(s)}</button>`).join('')}<button class="btn ghost small" data-a="lmCancel">Cancel</button></div>`;
-      }
-      h+=`<div class="cards">${P.hand.map((k,i)=>{
+      if(act){
+        const first=!st.chain.length;
+        v.prompt=`Weave from ${symH(cur)}. Each card must match the last symbol.`;
+        v.hand=handHTML(me.hand.map((k,i)=>{
           const c=LMC[k],ok=lmMatch(c,cur),can=ok||first;
-          return cardHTML(c,{btn:true,disabled:!can||st.pending!=null,cls:ok?'hot':can?'':'dim',face:c.face,attrs:`data-a="lmPlay" data-i="${i}"`,foot:!ok&&first?'<span class="left">Restart: no effect</span>':''});
-        }).join('')||'<p class="muted">No cards left in hand.</p>'}</div>
-        <div class="row"><button class="btn primary" data-a="lmFinish">Finish thread</button><span class="muted">Ending on ${symH(cur)}. ${oppInfo}</span></div></div>`;
+          return {def:c,o:{btn:true,disabled:!can||st.pending!=null,cls:ok?'glow':can?'restart':'dim',attrs:`data-a="lmPlay" data-i="${i}"`,foot:!ok&&first?'Restart: no effect':''}};
+        }))||'<p class="empty">No cards left in hand.</p>';
+        const oc=lmInCounts(O);
+        v.actions=`<span class="hint">${L(1-S)} can start on ${['S','M','L','W'].map(s=>`${symH(s)}${oc[s]}`).join(' ')} ✱${oc['*']}</span><button class="btn primary big" data-a="lmFinish">Finish thread</button>`;
+        if(st.pending!=null){
+          v.arena+=`<div class="picker"><span>Choose where ${LMC[me.hand[st.pending]].n} leads:</span>${['S','M','L','W'].map(s=>`<button class="bead ${s}" data-a="lmOut" data-i="${s}" aria-label="${SYMNAME[s]}">${SYM[s]}</button>`).join('')}<button class="btn small" data-a="lmCancel">Cancel</button></div>`;
+        }
+      }else{
+        v.prompt=`${L(A)} is weaving from ${symH(cur)}.`;
+        v.hand=preview();
+      }
     }else{
-      h+=`<div class="panel"><div class="spread"><div><div class="label">Glamour to spend</div><div class="big">${st.glamour}</div></div>
-        <div class="row">${st.bought.length?`<span class="muted">Bought: ${st.bought.map(k=>LMC[k].n).join(', ')}</span>`:''}<button class="btn primary" data-a="lmEnd">End turn</button></div></div>${thread}
-        ${marketHTML(LMC,st.supply,st.glamour,true,'lmBuy')}</div>`;
+      v.prompt=act?'Spend your Glamour on new threads.':`${L(A)} is shopping.`;
+      v.arena+=shopHTML(LMC,st.supply,st.glamour,act,'lmBuy');
+      if(act)v.actions=`<button class="btn primary big" data-a="lmEnd">End turn</button>`;
+      v.hand=preview();
     }
-    return h;
+    return v;
   },
   on:{
     lmPlay(st,i){
       i=+i;const P=st.players[st.turn],c=LMC[P.hand[i]];
       if(!lmMatch(c,lmCur(st))&&st.chain.length)return;
-      if(c.out==='*'){st.pending=i;return}
+      if(c.out==='*'){st.pending=i;sfx('tap');return}
       lmApply(st,i,null);
     },
     lmOut(st,s){if(st.pending==null)return;const i=st.pending;st.pending=null;lmApply(st,i,s)},
     lmCancel(st){st.pending=null},
     lmFinish(st,_,ctx){
       const P=st.players[st.turn],b=lmBonus(st.chain.length);P.score+=b;
+      if(b){pop(st.turn,`Thread bonus +${b} ★`);sfx('score')}
       st.log.push(`${ctx.label(st.turn)} wove ${st.chain.length} card${st.chain.length===1?'':'s'} for ${st.glamour} Glamour and ${st.vpGained+b} ★${b?` (thread bonus ${b})`:''}${st.chain.length?`, ending on ${SYM[lmCur(st)]}`:''}.`);
       st.pending=null;st.phase='buy';
     },
     lmBuy(st,key){
       const c=LMC[key];if(st.glamour<c.cost||!st.supply[key])return;
-      st.glamour-=c.cost;st.supply[key]--;st.players[st.turn].discard.push(key);st.bought.push(key);
+      st.glamour-=c.cost;st.supply[key]--;st.players[st.turn].discard.push(key);st.bought.push(key);sfx('card');
       if(st.supply.master===0||emptyPiles(st.supply)>=2)st.endTriggered=true;
     },
     lmEnd(st,_,ctx){
@@ -321,10 +502,12 @@ const GAME={
         if(last.k==='snarl'&&!last.dead&&O.hand.length){
           const lost=O.hand.splice(rnd(O.hand.length),1)[0];O.discard.push(lost);
           st.log.push(`Snarl: ${ctx.label(1-me)} loses ${LMC[lost].n} from their next hand.`);
+          pop(1-me,'Snarled!','bad');
         }
       }
       P.discard.push(...P.hand,...st.chain.map(x=>x.k));P.hand=draw(P,5);
       Object.assign(st,{chain:[],glamour:0,vpGained:0,bought:[],pending:null,phase:'weave'});
+      sfx('tap');
       return passTurn(st,14);
     },
   },
@@ -352,28 +535,36 @@ const GAME={
 };
 
 // =====================================================================
-// Shell: lobby, local + online storage, bot and hotseat turns.
-// Local games (vs bot, hotseat) live in this browser. Online games need the
-// Claude artifact runtime (window.claude) and are shared through its db.
+// Shell: title screen, game table, overlays, storage, bot and hotseat turns.
+// Local games (vs bot, pass and play) live in this browser. Online games need
+// the Claude artifact runtime (window.claude) and are shared through its db.
 // =====================================================================
 const HUB='https://dyrota.github.io/prototypes/';
 const $app=document.getElementById('app');
 const LS='proto-'+GAME.key+'-games';
+const ICON={
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 17h.01"/></svg>',
+  on:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9a4 4 0 0 1 0 6M19.5 6a8 8 0 0 1 0 12"/></svg>',
+  off:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>',
+};
 let DB=null,USER=null,ME=null,ONLINE=false,CANWRITE=true;
 let LOCAL={},REMOTE={},names={};
-let view={screen:'lobby',id:null},work=null,workKey=null,confirmDel=null,handoff=null,botTimer=null;
+let view={screen:'title',id:null},work=null,workKey=null,modal=null,confirmDel=null,handoff=null,botTimer=null,dismissed=null;
+try{MUTED=localStorage.getItem('proto-muted')==='1'}catch(e){}
 
 function lsLoad(){try{return JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){return {}}}
 function lsSave(){try{localStorage.setItem(LS,JSON.stringify(LOCAL))}catch(e){}}
 const getGame=id=>LOCAL[id]||REMOTE[id];
 const isLocal=g=>g.mode==='local';
 const vsBot=g=>isLocal(g)&&g.seats.includes('bot');
+const isHot=g=>isLocal(g)&&!vsBot(g);
 
 function seatLabel(g,i){
   const s=g.seats[i];
   if(isLocal(g))return s==='bot'?'Bot':vsBot(g)?'You':`Seat ${i+1}`;
   if(!s)return 'Open seat';
-  if(s===ME)return g.seats[0]===g.seats[1]?`You (seat ${i+1})`:'You';
+  if(s===ME)return g.seats[0]===g.seats[1]?`Seat ${i+1}`:'You';
   return clean(names[s]||'Opponent');
 }
 function canActIn(g,st){
@@ -381,103 +572,173 @@ function canActIn(g,st){
   const s=g.seats[st.turn];
   return isLocal(g)?s==='h':CANWRITE&&s===ME;
 }
-function gameCtx(g){const st=work||g.state;return {canAct:canActIn(g,st),label:i=>seatLabel(g,i)}}
+// Which seat sits at the bottom of the table.
+function perspective(g,st){
+  if(vsBot(g))return g.seats.indexOf('h');
+  if(isHot(g)||g.seats[0]===g.seats[1])return st.turn;
+  const i=g.seats.indexOf(ME);return i<0?0:i;
+}
 function statusFor(g){
   const st=g.state;
   if(st.over||g.status==='done')return {cls:'done',txt:'Finished'};
-  if(g.seats[st.turn]==='bot')return {cls:'wait',txt:'Bot is playing'};
-  if(canActIn(g,st))return {cls:'go',txt:isLocal(g)&&!vsBot(g)?`Seat ${st.turn+1} to play`:'Your turn'};
+  if(g.seats[st.turn]==='bot')return {cls:'wait',txt:'Bot to play'};
+  if(canActIn(g,st))return {cls:'go',txt:isHot(g)?`Seat ${st.turn+1} to play`:'Your turn'};
   if(!g.seats[1]&&st.turn===1)return {cls:'wait',txt:'Waiting for an opponent'};
   return {cls:'wait',txt:`${seatLabel(g,st.turn)} to play`};
 }
-function modeName(g){return isLocal(g)?(vsBot(g)?'vs bot':'hotseat'):'online'}
+const modeName=g=>isLocal(g)?(vsBot(g)?'vs bot':'pass and play'):'online';
+const initial=s=>s==='Bot'?'B':s==='You'?'Y':s.startsWith('Seat ')?s.slice(5):(s[0]||'?').toUpperCase();
 
 function render(){
   if(view.screen==='game'&&getGame(view.id))renderGame();
-  else{view={screen:'lobby',id:null};renderLobby()}
+  else{view={screen:'title',id:null};renderTitle()}
+  const ov=modalHTML();
+  if(ov)$app.insertAdjacentHTML('beforeend',ov);
+  flushFX();
 }
 
-function gameItem(id,g,join){
-  const s=statusFor(g),st=g.state;
-  return `<div class="gitem"><span class="dot"></span>
-    <div><b>${seatLabel(g,0)} ${GAME.score(st,0)} – ${GAME.score(st,1)} ${seatLabel(g,1)}</b> <span class="muted">· ${modeName(g)} · round ${st.round}</span></div>
-    <div class="row">${join?(CANWRITE?`<button class="btn small primary" data-a="join" data-i="${id}">Join</button>`:''):`<span class="pill ${s.cls}">${s.txt}</span>`}
-      <button class="btn small" data-a="open" data-i="${id}">${join?'Watch':'Open'}</button>
-      ${!join&&(isLocal(g)||g.createdBy===ME)?`<button class="btn small ghost" data-a="del" data-i="${id}">${confirmDel===id?'Confirm delete':'Delete'}</button>`:''}</div></div>`;
-}
-
-function renderLobby(){
+// ---------- title screen ----------
+function myGames(){
   const mine=[],open=[];
   for(const [id,g] of Object.entries(LOCAL))mine.push([id,g]);
   for(const [id,g] of Object.entries(REMOTE)){
     if(g.seats.includes(ME))mine.push([id,g]);
     else if(!g.seats[1]&&g.status!=='done')open.push([id,g]);
   }
-  const rank=g=>statusFor(g).cls==='go'?0:statusFor(g).cls==='wait'?1:2;
+  const rank=g=>({go:0,wait:1,done:2})[statusFor(g).cls];
   mine.sort((a,b)=>rank(a[1])-rank(b[1])||(b[1].updatedAt||0)-(a[1].updatedAt||0));
-  $app.innerHTML=`
-  <header class="intro">
-    <a class="back" href="${HUB}" target="_top">← All prototypes</a>
-    <h1>${GAME.title}</h1>
-    <p class="hook">${GAME.hook}</p>
-  </header>
-  <section class="panel"><h2>Play</h2>
-    <div class="row">
-      <button class="btn primary" data-a="new" data-i="bot">Play vs bot</button>
-      <button class="btn" data-a="new" data-i="hot">Hotseat: 2 players, 1 device</button>
-      ${ONLINE&&CANWRITE?`<button class="btn" data-a="new" data-i="online">New online game</button><button class="btn" data-a="new" data-i="solo">Online, both seats</button>`:''}
-    </div>
-    <p class="mode">${ONLINE
-      ?'<b>Online games are shared through this page.</b> Anyone it’s shared with at Contributor access can join an open seat and play their turns whenever they like.'
-      :'Bot and hotseat games are saved in this browser. For async online play, open the Claude artifact version of this game.'}</p>
-  </section>
-  <div class="two">
-    <section class="panel"><h3>A turn</h3><ol>${GAME.turn.map(t=>`<li>${t}</li>`).join('')}</ol></section>
-    <section class="panel"><h3>Test for</h3><p class="watch">${GAME.watch}</p></section>
-  </div>
-  <section class="panel"><h2>Your games</h2>${mine.length?`<div class="glist">${mine.map(([id,g])=>gameItem(id,g,false)).join('')}</div>`:'<p class="muted">No games yet. Start one above.</p>'}</section>
-  ${ONLINE?`<section class="panel"><h2>Open seats</h2>${open.length?`<div class="glist">${open.map(([id,g])=>gameItem(id,g,true)).join('')}</div>`:'<p class="muted">No one is waiting for an opponent right now.</p>'}</section>`:''}
-  <section class="panel"><h2>Rules</h2><ul class="rules">${GAME.rules.map(r=>`<li>${r}</li>`).join('')}</ul></section>`;
+  return {mine,open};
+}
+function renderTitle(){
+  const {mine,open}=myGames();
+  const cont=mine.find(([,g])=>statusFor(g).cls!=='done');
+  const yourTurn=mine.filter(([,g])=>!isLocal(g)&&statusFor(g).cls==='go').length;
+  $app.innerHTML=`<div class="title">
+    <div class="deco" aria-hidden="true"><div class="card back d1"></div><div class="card back d2"></div><div class="card back d3"></div></div>
+    <div class="title-inner">
+      <h1 class="logo">${GAME.title}</h1>
+      <p class="tag">${GAME.hook}</p>
+      <nav class="menu">
+        ${cont?`<button class="btn primary big" data-a="open" data-i="${cont[0]}">Continue<small>${modeName(cont[1])} · round ${cont[1].state.round} · ${GAME.score(cont[1].state,0)}–${GAME.score(cont[1].state,1)}</small></button>`:''}
+        <button class="btn ${cont?'':'primary '}big" data-a="new" data-i="bot">Play vs bot</button>
+        <button class="btn big" data-a="new" data-i="hot">Pass and play</button>
+        ${ONLINE&&CANWRITE?`<button class="btn big" data-a="new" data-i="online">New online game</button>`:''}
+        <div class="menu-row"><button class="btn" data-a="modal" data-i="rules">How to play</button><button class="btn" data-a="modal" data-i="games">Games${mine.length?` (${mine.length})`:''}</button></div>
+      </nav>
+      ${yourTurn?`<p class="notice">It’s your turn in ${yourTurn} online game${yourTurn===1?'':'s'}.</p>`:''}
+      ${open.length?`<p class="notice">${open.length} player${open.length===1?' is':'s are'} waiting for an opponent. <button class="linkbtn" data-a="modal" data-i="games">Join</button></p>`:''}
+      <p class="foot">${ONLINE?'Online games are shared through this page. Friends need Contributor access to join.':'Games are saved in this browser.'} · <a href="${HUB}" target="_top">All prototypes</a></p>
+    </div></div>`;
 }
 
+// ---------- game table ----------
 function renderGame(){
   const g=getGame(view.id),key=view.id+':'+(g.v||0);
-  if(workKey!==key){work=clone(g.state);workKey=key}
-  const st=work,ctx=gameCtx(g),s=statusFor(g),iAmIn=!isLocal(g)&&g.seats.includes(ME);
-  let banner;
-  if(st.over){const a=GAME.score(st,0),b=GAME.score(st,1);banner=a===b?`Tied at ${a} ★.`:`${ctx.label(a>b?0:1)} won, ${Math.max(a,b)} to ${Math.min(a,b)}.`}
-  else if(g.seats[st.turn]==='bot')banner='The bot is taking its turn…';
-  else if(ctx.canAct)banner=isLocal(g)&&!vsBot(g)?`Seat ${st.turn+1}, your turn.`:'Your turn.';
-  else if(!isLocal(g)&&!g.seats[1])banner=iAmIn?'Waiting for someone to join. They’ll take seat 2.':'Seat 2 is open.';
-  else banner=`${ctx.label(st.turn)} to play.`;
-  const showHandoff=handoff===view.id&&!st.over;
-  $app.innerHTML=`
-  <section class="panel gbar">
-    <div class="spread"><button class="btn ghost small" data-a="lobby">← ${GAME.title} games</button><span class="muted">${modeName(g)} · round ${st.round}</span></div>
-    <div class="seats">${[0,1].map(i=>`<div class="seat ${st.turn===i&&!st.over?'on':''}"><span>${ctx.label(i)}${st.turn===i&&!st.over?' <span class="muted">· to play</span>':''}</span><span class="score">${GAME.score(st,i)} ★</span></div>`).join('')}</div>
-    <div class="spread"><p class="status">${banner}</p><div class="row">
-      ${!isLocal(g)&&!g.seats[1]&&CANWRITE?(iAmIn?`<button class="btn small" data-a="solo" data-i="${view.id}">Take seat 2 myself</button>`:`<button class="btn small primary" data-a="join" data-i="${view.id}">Join as seat 2</button>`):''}
-      ${ctx.canAct&&!showHandoff?`<button class="btn small ghost" data-a="undo">Restart this turn</button>`:''}
-      ${st.over?`<button class="btn small primary" data-a="rematch">Rematch</button>`:''}</div></div>
-    <details class="rules"><summary>Rules</summary><ul>${GAME.rules.map(r=>`<li>${r}</li>`).join('')}</ul></details>
-  </section>
-  ${showHandoff
-    ?`<section class="panel handoff"><h2>Seat ${st.turn+1}’s turn</h2><p>Pass the device to seat ${st.turn+1}, then tap Ready.</p><div class="row"><button class="btn primary" data-a="ready">Ready</button></div></section>`
-    :`<div class="board">${GAME.view(st,ctx)}</div>`}
-  <section class="panel"><h3>Log</h3><div class="log">${st.log.slice(-14).reverse().map(l=>`<div>${esc(l)}</div>`).join('')||'<span>Nothing yet.</span>'}</div></section>`;
-  if(vsBot(g)&&g.seats[st.turn]==='bot'&&!st.over&&!botTimer)botTimer=setTimeout(runBot,700);
+  if(workKey!==key){work=clone(g.state);workKey=key;FX.deal=true;FX.prompt=true}
+  const st=work,S=perspective(g,st),canAct=canActIn(g,st);
+  const ctx={seat:S,canAct,hot:isHot(g),label:i=>seatLabel(g,i)};
+  const v=GAME.view(st,ctx);
+  if(!v.prompt){
+    if(st.over)v.prompt='Game over.';
+    else if(!isLocal(g)&&!g.seats[1])v.prompt=g.seats[0]===ME?'Waiting for someone to join.':'Seat 2 is open.';
+    else v.prompt=`${ctx.label(st.turn)} to play.`;
+  }
+  if(!canAct&&!st.over&&!isLocal(g)&&g.seats[st.turn]!==ME)v.prompt+=` <span class="muted">Waiting for ${ctx.label(st.turn)}.</span>`;
+  const plate=(i,cls)=>{const name=ctx.label(i);
+    return `<div class="plate ${cls}${st.turn===i&&!st.over?' active':''}" data-seat="${i}"><span class="avatar">${initial(name)}</span>
+      <div class="pl-body"><div class="pl-name">${name}</div><div class="pl-info">${i===S?v.meInfo:v.oppInfo}</div></div>
+      <div class="pl-score"><b>${GAME.score(st,i)}</b><span>★</span></div></div>`};
+  const covered=handoff===view.id&&!st.over;
+  const joinBtn=!isLocal(g)&&!g.seats[1]&&CANWRITE?(g.seats[0]===ME?`<button class="btn small" data-a="solo" data-i="${view.id}">Take seat 2 myself</button>`:`<button class="btn primary" data-a="join" data-i="${view.id}">Join as seat 2</button>`):'';
+  $app.innerHTML=`<div class="stage">
+    <header class="hud">
+      <button class="icon" data-a="menu" aria-label="Back to menu">${ICON.menu}</button>
+      ${plate(1-S,'opp')}
+      <div class="hud-r"><span class="round">Round ${st.round}/${GAME.maxRounds}</span>
+        <button class="icon" data-a="modal" data-i="rules" aria-label="How to play">${ICON.help}</button>
+        <button class="icon" data-a="mute" aria-label="${MUTED?'Turn sound on':'Turn sound off'}">${MUTED?ICON.off:ICON.on}</button></div>
+    </header>
+    <div class="prompt${FX.prompt?' new':''}">${covered?'':v.prompt}</div>
+    <main class="arena">${covered?'':v.arena}</main>
+    <div class="bottom">
+      <div class="tray">${plate(S,'me')}<div class="actions">${joinBtn}${covered?'':v.actions}${canAct&&!covered?`<button class="btn ghost small" data-a="undo">Undo turn</button>`:''}${st.over?`<button class="btn primary" data-a="rematch">Rematch</button>`:''}</div></div>
+      <div class="hand">${covered?'':v.hand}</div>
+    </div>
+  </div>`;
+  if(vsBot(g)&&g.seats[st.turn]==='bot'&&!st.over&&!botTimer)botTimer=setTimeout(botTick,FX.deal?1100:750);
 }
 
-function runBot(){
+// ---------- overlays ----------
+function modalHTML(){
+  const g=view.screen==='game'?getGame(view.id):null;
+  if(g&&handoff===view.id&&!work.over){
+    return `<div class="overlay"><div class="modal center"><div class="end-title">Seat ${work.turn+1}</div><p>Pass the device to seat ${work.turn+1}, then tap Ready.</p><button class="btn primary big" data-a="ready">Ready</button></div></div>`;
+  }
+  if(g&&work.over&&dismissed!==view.id&&!modal){
+    const a=GAME.score(work,0),b=GAME.score(work,1),S=perspective(g,work);
+    let title;
+    if(a===b)title='Draw';
+    else if(isHot(g)||g.seats[0]===g.seats[1])title=`Seat ${a>b?1:2} wins`;
+    else title=(a>b?0:1)===S?'Victory':'Defeat';
+    return `<div class="overlay"><div class="modal center end">
+      <div class="end-title">${title}</div>
+      <div class="end-scores">${[0,1].map(i=>`<div><span>${seatLabel(g,i)}</span><b>${GAME.score(work,i)} ★</b></div>`).join('')}</div>
+      <div class="row center"><button class="btn primary big" data-a="rematch">Rematch</button><button class="btn" data-a="menu">Menu</button><button class="btn ghost" data-a="dismiss">See the board</button></div></div></div>`;
+  }
+  if(modal==='rules'){
+    return `<div class="overlay" data-a="close"><div class="modal" role="dialog" aria-label="How to play">
+      <div class="spread"><h2>How to play ${GAME.title}</h2><button class="btn small" data-a="close">Close</button></div>
+      <p class="lead">${GAME.hook}</p>
+      <h3>A turn</h3><ol>${GAME.turn.map(t=>`<li>${t}</li>`).join('')}</ol>
+      <h3>Rules</h3><ul>${GAME.rules.map(r=>`<li>${r}</li>`).join('')}</ul>
+      <h3>Test for</h3><p class="watch">${GAME.watch}</p>
+      ${g?`<h3>Log</h3><div class="log">${work.log.slice(-14).reverse().map(l=>`<div>${esc(l)}</div>`).join('')||'Nothing yet.'}</div>`:''}
+    </div></div>`;
+  }
+  if(modal==='games'){
+    const {mine,open}=myGames();
+    const item=([id,g],join)=>{const s=statusFor(g),st=g.state;
+      return `<div class="gitem"><div><b>${seatLabel(g,0)} ${GAME.score(st,0)} – ${GAME.score(st,1)} ${seatLabel(g,1)}</b><div class="muted">${modeName(g)} · round ${st.round}</div></div>
+        <div class="row">${join?(CANWRITE?`<button class="btn small primary" data-a="join" data-i="${id}">Join</button>`:''):`<span class="pill ${s.cls}">${s.txt}</span>`}
+        <button class="btn small" data-a="open" data-i="${id}">${join?'Watch':'Open'}</button>
+        ${!join&&(isLocal(g)||g.createdBy===ME)?`<button class="btn small ghost" data-a="del" data-i="${id}">${confirmDel===id?'Confirm':'Delete'}</button>`:''}</div></div>`};
+    return `<div class="overlay" data-a="close"><div class="modal" role="dialog" aria-label="Games">
+      <div class="spread"><h2>Games</h2><button class="btn small" data-a="close">Close</button></div>
+      ${mine.length?`<div class="glist">${mine.map(x=>item(x,false)).join('')}</div>`:'<p class="muted">No games yet.</p>'}
+      ${ONLINE?`<h3>Open seats</h3>${open.length?`<div class="glist">${open.map(x=>item(x,true)).join('')}</div>`:'<p class="muted">No one is waiting for an opponent.</p>'}
+        ${CANWRITE?`<p class="muted">Testing alone online? <button class="linkbtn" data-a="new" data-i="solo">Start a game and play both seats</button>.</p>`:''}`:''}
+    </div></div>`;
+  }
+  return '';
+}
+
+// ---------- effects ----------
+function flushFX(){
+  if(typeof document!=='undefined'&&FX.pops.length){
+    const g=getGame(view.id);
+    FX.pops.forEach((p,n)=>{
+      const el=document.querySelector(`.plate[data-seat="${p.seat}"]`)||document.querySelector('.arena');
+      if(!el)return;
+      const r=el.getBoundingClientRect(),d=document.createElement('div');
+      d.className='pop '+p.kind;d.textContent=p.text;
+      d.style.left=(r.left+r.width/2)+'px';d.style.top=(r.top+r.height/2-n*26)+'px';
+      document.body.appendChild(d);setTimeout(()=>d.remove(),1400);
+    });
+  }
+  FX.pops=[];FX.deal=false;FX.bead=false;FX.fight=false;FX.prompt=false;
+}
+
+// ---------- turns ----------
+function botTick(){
   botTimer=null;
-  const id=view.id,g=getGame(id);
-  if(!g||!vsBot(g)||g.state.over||g.seats[g.state.turn]!=='bot')return;
-  const w=clone(g.state),ctx={canAct:true,label:i=>seatLabel(g,i)};
-  for(let n=0;n<300;n++){if(GAME.bot(w,ctx)==='commit')break}
-  const doc=clone(g);doc.state=w;if(w.over)doc.status='done';
-  saveGame(id,doc);
+  const g=getGame(view.id);
+  if(view.screen!=='game'||!g||!vsBot(g)||work.over||g.seats[work.turn]!=='bot')return;
+  const ctx={seat:work.turn,canAct:true,label:i=>seatLabel(g,i)};
+  if(GAME.bot(work,ctx)==='commit'){
+    const doc=clone(g);doc.state=clone(work);if(work.over){doc.status='done';sfx(GAME.score(work,0)===GAME.score(work,1)?'tap':'lose')}
+    saveGame(view.id,doc);
+  }else render();
 }
-
 async function saveGame(id,doc){
   doc.updatedAt=Date.now();doc.v=(doc.v||0)+1;
   if(doc.state.log.length>40)doc.state.log=doc.state.log.slice(-40);
@@ -497,7 +758,8 @@ function newGame(kind){
   if(kind==='bot')doc={...base,mode:'local',seats:['h','bot'],status:'active'};
   else if(kind==='hot')doc={...base,mode:'local',seats:['h','h'],status:'active'};
   else doc={...base,mode:'online',seats:[ME,kind==='solo'?ME:null],createdBy:ME,status:kind==='solo'?'active':'open'};
-  view={screen:'game',id};workKey=null;handoff=null;setHash(id);saveGame(id,doc);window.scrollTo(0,0);
+  modal=null;handoff=null;dismissed=null;view={screen:'game',id};workKey=null;setHash(id);sfx('card');
+  saveGame(id,doc);window.scrollTo(0,0);
 }
 async function claimSeat(id,asSolo){
   if(!ONLINE)return;
@@ -509,22 +771,26 @@ async function claimSeat(id,asSolo){
     if(!d||d.seats[1])return toast('That seat was just taken.');
     if(!asSolo&&d.seats[0]===ME)return;
     d.seats=[d.seats[0],ME];d.status='active';
-    view={screen:'game',id};setHash(id);await saveGame(id,d);
+    modal=null;view={screen:'game',id};setHash(id);await saveGame(id,d);
   }catch(e){toast('Couldn’t join that game. Try again.')}
 }
 function setHash(id){try{history.replaceState(null,'',id?'#'+id:location.pathname+location.search)}catch(e){}}
 
 const GLOBAL={
   new:kind=>newGame(kind),
-  open:id=>{view={screen:'game',id};workKey=null;handoff=null;setHash(id);render();window.scrollTo(0,0)},
-  lobby:()=>{view={screen:'lobby',id:null};handoff=null;setHash(null);render()},
+  open:id=>{modal=null;handoff=null;view={screen:'game',id};workKey=null;setHash(id);render();window.scrollTo(0,0)},
+  menu:()=>{modal=null;handoff=null;view={screen:'title',id:null};setHash(null);render();window.scrollTo(0,0)},
+  modal:m=>{modal=m;render()},
+  close:()=>{modal=null;confirmDel=null;render()},
   join:id=>claimSeat(id,false),
-  solo:id=>claimSeat(id,true),
+  solo:id=>{modal=null;claimSeat(id,true)},
   undo:()=>{workKey=null;render()},
-  ready:()=>{handoff=null;render()},
+  ready:()=>{handoff=null;FX.deal=true;render()},
+  dismiss:()=>{dismissed=view.id;render()},
+  mute:()=>{MUTED=!MUTED;try{localStorage.setItem('proto-muted',MUTED?'1':'0')}catch(e){}render();sfx('tap')},
   rematch:()=>{const g=getGame(view.id);newGame(isLocal(g)?(vsBot(g)?'bot':'hot'):g.seats[0]===g.seats[1]?'solo':'online')},
   del:async id=>{
-    if(confirmDel!==id){confirmDel=id;render();setTimeout(()=>{if(confirmDel===id){confirmDel=null;render()}},4000);return}
+    if(confirmDel!==id){confirmDel=id;render();return}
     confirmDel=null;
     if(LOCAL[id]){delete LOCAL[id];lsSave();render();return}
     const prev=REMOTE[id];delete REMOTE[id];render();
@@ -533,17 +799,21 @@ const GLOBAL={
 };
 document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
+  // Clicking the dimmed backdrop closes a modal; clicks inside it don't.
+  if(b.classList.contains('overlay')&&e.target!==b)return;
   const a=b.dataset.a,arg=b.dataset.i;
   if(GLOBAL[a])return GLOBAL[a](arg);
   const g=getGame(view.id);if(!g)return;
-  const ctx=gameCtx(g),h=GAME.on[a];
+  const S=perspective(g,work),ctx={seat:S,canAct:canActIn(g,work),hot:isHot(g),label:i=>seatLabel(g,i)},h=GAME.on[a];
   if(!h||!ctx.canAct)return;
   if(h(work,arg,ctx)==='commit'){
-    const doc=clone(g);doc.state=clone(work);if(work.over)doc.status='done';
-    if(isLocal(doc)&&!vsBot(doc)&&!work.over)handoff=view.id;
+    const doc=clone(g);doc.state=clone(work);
+    if(work.over){doc.status='done';const a0=GAME.score(work,0),a1=GAME.score(work,1);sfx(a0===a1?'tap':(a0>a1?0:1)===S||isHot(g)?'win':'lose')}
+    else if(isHot(doc))handoff=view.id;
     await saveGame(view.id,doc);window.scrollTo(0,0);
   }else render();
 });
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal){modal=null;render()}});
 
 async function refreshNames(){
   if(!USER)return;
@@ -570,7 +840,7 @@ async function init(){
     const next={};
     snap.docs.forEach(d=>{const v=d.data();if(v&&v.state&&v.type===GAME.key)next[d.id]=v});
     REMOTE=next;
-    if(first){first=false;if(h&&REMOTE[h]&&view.screen==='lobby')view={screen:'game',id:h}}
+    if(first){first=false;if(h&&REMOTE[h]&&view.screen==='title')view={screen:'game',id:h}}
     refreshNames();render();
   },()=>toast('Lost the connection to shared games. Reload to reconnect.'));
 }
