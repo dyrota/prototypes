@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Async Deckbuilder Prototypes</title>
+<meta name="description" content="Three small deckbuilders built for asynchronous play, with no shared market row.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root{--bg:#E9EEEA;--surface:#F8FAF7;--ink:#1B2320;--muted:#5A6661;--line:#C9D3CD;--accent:#2D5E8C;--ff:#7B4FA3;--lm:#1E7A70;--rl:#A0640F;
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;--body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#111715;--surface:#19211E;--ink:#E4EBE7;--muted:#97A49E;--line:#2E3934;--accent:#86AEDB;--ff:#BB98DD;--lm:#5CC4B7;--rl:#E2A64E;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+main{max-width:1000px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+h1,h2{font-family:var(--display);margin:0;line-height:1.1;text-wrap:balance}
+h1{font-size:clamp(34px,6vw,54px);letter-spacing:-.015em}
+h2{font-size:28px;color:var(--c)}
+p{margin:0;max-width:66ch}
+.lede{font-size:18px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.game{background:var(--surface);border:1px solid var(--line);border-top:6px solid var(--c);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.links{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto}
+.links a{font-weight:700;text-decoration:none;border-radius:8px;padding:8px 14px;border:1px solid var(--line);color:var(--ink)}
+.links a.play{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.links a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{font-size:14px;color:var(--muted)}
+footer{font-size:14px;color:var(--muted)}
+footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1>Async Deckbuilder Prototypes</h1>
+    <p class="lede">Three small deckbuilders built for turn-by-turn asynchronous play. Every turn is self-contained, and none of them has a shared market row. Each one has a bot to test against.</p>
+  </header>
+  <div class="grid">
+    <section class="game" style="--c:var(--ff)">
+      <h2>Fair Folk</h2>
+      <p>Your opponent splits every hand you draw into two piles. You choose which half to play, then you split their next hand.</p>
+      <div class="links"><a class="play" href="fair-folk/">Play</a></div>
+    </section>
+    <section class="game" style="--c:var(--lm)">
+      <h2>Loom</h2>
+      <p>Every card links one symbol to another. You continue the shared thread from wherever your opponent left it, and leave them a symbol of your choosing.</p>
+      <div class="links"><a class="play" href="loom/">Play</a></div>
+    </section>
+    <section class="game" style="--c:var(--rl)">
+      <h2>Relay</h2>
+      <p>You both face the same twelve foes in the same order. Take one card from your offer; the two you pass up become your rival’s next offer.</p>
+      <div class="links"><a class="play" href="relay/">Play</a></div>
+    </section>
+  </div>
+  <p class="note">Games here are played against the bot or hotseat on one device, and saved in your browser. Async online play between people runs in each game’s Claude artifact version.</p>
+  <footer>Source: <a href="https://github.com/dyrota/prototypes">github.com/dyrota/prototypes</a></footer>
+</main>
+</body>
+</html>

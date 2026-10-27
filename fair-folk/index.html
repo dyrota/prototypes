@@ -1,0 +1,591 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>Fair Folk</title>
+<meta name="description" content="Async deckbuilder prototype: your opponent splits every hand you draw, and you choose which half to play.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column card table: lobby (play options, rules, games) then a board per game. */
+:root{
+  --bg:#E9EEEA; --surface:#F8FAF7; --surface2:#FFFFFF; --ink:#1B2320; --muted:#5A6661; --line:#C9D3CD;
+  --accent:#2D5E8C; --accent-ink:#FFFFFF; --good:#2E7D4F; --bad:#B0413E;
+  --ff:#7B4FA3; --lm:#1E7A70; --rl:#A0640F;
+  --pA:#2D5E8C; --pB:#A0640F;
+  --sS:#B9800A; --sM:#5463B5; --sL:#3A8747; --sW:#23809F;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111715; --surface:#19211E; --surface2:#202A26; --ink:#E4EBE7; --muted:#97A49E; --line:#2E3934;
+  --accent:#86AEDB; --accent-ink:#0E1A26; --good:#6CC08E; --bad:#E58A86;
+  --ff:#BB98DD; --lm:#5CC4B7; --rl:#E2A64E; --pA:#86AEDB; --pB:#E2A64E;
+  --sS:#E3B23C; --sM:#9AA6F0; --sL:#79C487; --sW:#62BFDD; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111715; --surface:#19211E; --surface2:#202A26; --ink:#E4EBE7; --muted:#97A49E; --line:#2E3934;
+  --accent:#86AEDB; --accent-ink:#0E1A26; --good:#6CC08E; --bad:#E58A86;
+  --ff:#BB98DD; --lm:#5CC4B7; --rl:#E2A64E; --pA:#86AEDB; --pB:#E2A64E;
+  --sS:#E3B23C; --sM:#9AA6F0; --sL:#79C487; --sW:#62BFDD; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+#app{--c:var(--ff);max-width:1080px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:clamp(32px,6vw,48px);font-weight:700;letter-spacing:-.01em;color:var(--c)}
+h2{font-size:22px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+a{color:var(--accent)}
+.muted{color:var(--muted)}
+.mono,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 14px;font-weight:700}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{padding:4px 10px;font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.spread{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.intro{display:flex;flex-direction:column;gap:8px;max-width:68ch;padding-top:4px}
+.intro .hook{font-size:18px}
+.back{font-size:13px;font-weight:700;text-decoration:none}
+.mode{font-size:13px;color:var(--muted)}
+.mode b{color:var(--ink)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+ol,ul.rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.watch{border-left:3px solid var(--c);padding-left:10px}
+.glist{display:flex;flex-direction:column;gap:8px}
+.gitem{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.gitem .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.pill.go{background:var(--good);color:var(--surface2);border-color:var(--good)}
+.pill.wait{color:var(--muted)}
+.pill.done{color:var(--muted);border-style:dashed}
+.gbar{border-top:6px solid var(--c)}
+.seats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seat{border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface2)}
+.seat.on{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}
+.seat .score{font-family:var(--mono);font-size:20px}
+.status{font-weight:700}
+details.rules summary{cursor:pointer;font-weight:700}
+details.rules ul{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.board{display:flex;flex-direction:column;gap:16px}
+.handoff{align-items:flex-start;padding-block:40px;border-top:6px solid var(--c)}
+.cards{display:flex;flex-wrap:wrap;gap:10px}
+.card{width:136px;min-height:150px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);padding:9px 10px;display:flex;flex-direction:column;gap:6px;text-align:left;position:relative}
+button.card:hover:not(:disabled){border-color:var(--accent)}
+button.card:disabled{cursor:default}
+.card .top{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
+.card .nm{font-family:var(--display);font-weight:700;font-size:15px;line-height:1.15}
+.card .cost{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:6px;padding:0 6px;white-space:nowrap}
+.card .tx{font-size:12.5px;color:var(--muted);line-height:1.35}
+.card .stat{font-family:var(--mono);font-size:13px;margin-top:auto}
+.card.dim{opacity:.4}
+.card.hot{border-color:var(--good);box-shadow:inset 0 0 0 1px var(--good)}
+.card.pA{border-top:5px solid var(--pA)}
+.card.pB{border-top:5px solid var(--pB)}
+.card .left{font-size:11px;color:var(--muted)}
+.cards.mini .card{width:112px;min-height:0}
+.piles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pile{border:2px dashed var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.pile.A{border-color:var(--pA)} .pile.B{border-color:var(--pB)}
+.pile h3.A{color:var(--pA)} .pile h3.B{color:var(--pB)}
+.calc{font-size:13px;color:var(--muted)}
+.calc b{color:var(--ink);font-family:var(--mono)}
+.big{font-family:var(--mono);font-size:26px;line-height:1}
+.mkt{display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:10px}
+.mkt .card{width:auto}
+.sym{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;font-size:16px;color:#fff;font-weight:700;line-height:1}
+.sym.S{background:var(--sS)} .sym.M{background:var(--sM)} .sym.L{background:var(--sL)} .sym.W{background:var(--sW)}
+.sym.any{background:transparent;color:var(--ink);border:1.5px dashed var(--muted);font-size:13px}
+.weave{display:flex;align-items:center;gap:6px;font-family:var(--mono);color:var(--muted)}
+.thread{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);min-height:52px}
+.knot{display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);font-size:13px}
+.knot.dead{opacity:.5;text-decoration:line-through}
+.ladder{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.rung{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;background:var(--surface2);display:flex;flex-direction:column;gap:2px}
+.rung.now{border-color:var(--c);box-shadow:inset 0 0 0 2px var(--c)}
+.rung .r{display:flex;gap:6px}
+.res{font-family:var(--mono);font-size:12px;padding:0 5px;border-radius:4px}
+.res.W{color:var(--good);border:1px solid var(--good)} .res.L{color:var(--bad);border:1px solid var(--bad)}
+.log{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;z-index:20;max-width:calc(100% - 32px)}
+.ok{color:var(--good)} .no{color:var(--bad)}
+@media (max-width:560px){.piles,.seats{grid-template-columns:1fr}.card{width:calc(50% - 5px)}.gitem{grid-template-columns:auto 1fr}.gitem .row{grid-column:1/-1}}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .12s, box-shadow .12s}}
+</style>
+<div id="app"><p class="muted">Loading…</p></div>
+<script>
+// ---------- shared helpers (used by every game engine and the shell) ----------
+const rnd=n=>Math.floor(Math.random()*n);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+const rep=(k,n)=>Array(n).fill(k);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clean=s=>String(s).replace(/[<>&"']/g,'');
+const newId=()=>'g'+Math.random().toString(36).slice(2,10);
+const emptyPiles=s=>Object.values(s).filter(v=>v===0).length;
+
+function draw(p,n){
+  const out=[];
+  for(let k=0;k<n;k++){
+    if(!p.deck.length){if(!p.discard.length)break;p.deck=shuffle(p.discard);p.discard=[]}
+    out.push(p.deck.pop());
+  }
+  return out;
+}
+// Seat 2 closes each round; the game ends at the close of the round where the end was triggered.
+function passTurn(st,maxRounds){
+  const was=st.turn;st.turn=1-was;
+  if(was===1){if(st.endTriggered||st.round>=maxRounds)st.over=true;else st.round++}
+  return 'commit';
+}
+
+let toastTimer;
+function toast(msg){
+  if(typeof document==='undefined')return;
+  let t=document.querySelector('.toast');
+  if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}
+  t.textContent=msg;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.remove(),3200);
+}
+function cardHTML(def,o={}){
+  const tag=o.btn?'button':'div';
+  return `<${tag} class="card ${o.cls||''}" ${o.attrs||''} ${o.btn&&o.disabled?'disabled':''}>
+    <div class="top"><span class="nm">${def.n}</span>${def.cost?`<span class="cost">${def.cost}</span>`:''}</div>
+    ${o.face||''}<div class="tx">${def.txt||''}</div>${o.foot?`<div class="stat">${o.foot}</div>`:''}</${tag}>`;
+}
+function marketHTML(defs,supply,glam,canAct,action){
+  return `<div class="mkt">${Object.keys(supply).map(k=>{
+    const d=defs[k],ok=canAct&&supply[k]>0&&glam>=d.cost;
+    return cardHTML(d,{btn:true,disabled:!ok,cls:ok?'':'dim',face:d.face||'',
+      attrs:`data-a="${action}" data-i="${k}" aria-label="Buy ${d.n} for ${d.cost}"`,
+      foot:`<span class="left">${supply[k]} left</span>`});
+  }).join('')}</div>`;
+}
+
+// =====================================================================
+// FAIR FOLK: your opponent splits your hand into two piles; you keep one.
+// =====================================================================
+const FFC={
+  penny:{n:'Penny',g:1,txt:'+1 Glamour.'},
+  svow:{n:'Small Vow',vp:1,txt:'1 ★. Does nothing in hand.'},
+  bell:{n:'Silver Bell',cost:3,g:2,txt:'+2 Glamour.'},
+  twin:{n:'Twin Lantern',cost:2,g:1,txt:'+1. +2 more if another Twin Lantern is in the same pile.'},
+  hermit:{n:'Hermit',cost:3,g:1,txt:'+1, or +4 if it is alone in its pile.'},
+  hoard:{n:'Hoard',cost:4,g:1,txt:'+1 for each card in its pile, itself included.'},
+  change:{n:'Changeling',cost:4,g:2,txt:'+2. If spurned, it moves into the kept pile.'},
+  grudge:{n:'Grudge',cost:3,g:1,txt:'+1. If spurned, the divider gets no tithe.'},
+  mirror:{n:'Mirror',cost:5,g:0,txt:'+Glamour equal to the best printed value in the other pile.'},
+  witness:{n:'Witness',cost:4,g:1,txt:'+1. Next turn you split your own hand.'},
+  vow:{n:'Vow',cost:5,vp:3,txt:'3 ★. Does nothing in hand.'},
+  gvow:{n:'Grand Vow',cost:8,vp:6,txt:'6 ★. Does nothing in hand.'},
+};
+const FF_SUPPLY={twin:8,bell:8,hermit:6,grudge:6,hoard:6,change:6,witness:6,mirror:6,vow:8,gvow:4};
+const defSplit=n=>Array.from({length:n},(_,i)=>i<Math.ceil(n/2)?0:1);
+const validSplit=a=>a.length<2||(a.includes(0)&&a.includes(1));
+function randSplit(n){
+  if(n<2)return Array(n).fill(0);
+  const idx=shuffle([...Array(n).keys()]),a=Array(n).fill(1);
+  idx.slice(0,1+rnd(n-1)).forEach(i=>a[i]=0);
+  return a;
+}
+function ffResolve(hand,assign,k){
+  let kept=[],sp=[];
+  hand.forEach((c,i)=>(assign[i]===k?kept:sp).push(c));
+  const moved=sp.filter(c=>c==='change').length;
+  if(moved){kept=kept.concat(rep('change',moved));sp=sp.filter(c=>c!=='change')}
+  const best=sp.reduce((m,c)=>Math.max(m,FFC[c].g||0),0);
+  const twins=kept.filter(c=>c==='twin').length;
+  let g=0;
+  for(const c of kept){
+    if(c==='twin')g+=1+(twins>1?2:0);
+    else if(c==='hermit')g+=kept.length===1?4:1;
+    else if(c==='hoard')g+=kept.length;
+    else if(c==='mirror')g+=best;
+    else g+=FFC[c].g||0;
+  }
+  return {g,tithe:sp.includes('grudge')?0:sp.length,kept,sp,moved,witness:kept.includes('witness')};
+}
+function ffVP(st,i){
+  const P=st.players[i];let all=P.deck.concat(P.discard);
+  if(st.offer&&st.offer.seat===i)all=all.concat(st.offer.hand);
+  if(st.splitHand&&st.turn!==i)all=all.concat(st.splitHand);
+  return all.reduce((s,c)=>s+(FFC[c].vp||0),0);
+}
+function ffPiles(hand,assign,editable,forWhom){
+  return `<div class="piles">${[0,1].map(k=>{
+    const r=ffResolve(hand,assign,k),n=assign.filter(x=>x===k).length;
+    return `<div class="pile ${'AB'[k]}"><h3 class="${'AB'[k]}">Pile ${'AB'[k]} <span class="muted">· ${n} card${n===1?'':'s'}</span></h3>
+      <div class="cards mini">${hand.map((c,i)=>assign[i]!==k?'':cardHTML(FFC[c],{btn:editable,cls:'p'+'AB'[k],
+        attrs:editable?`data-a="ffToggle" data-i="${i}" aria-label="Move ${FFC[c].n} to the other pile"`:''})).join('')||'<p class="muted">Empty</p>'}</div>
+      ${n?`<p class="calc">If ${forWhom} keeps this: <b>+${r.g}</b> Glamour. Divider's tithe: <b>${r.tithe}</b>${r.moved?' · Changeling jumps over':''}</p>`:''}
+    </div>`;
+  }).join('')}</div>`;
+}
+// Every way to split a hand into two non-empty piles (pile labels don't matter, so card 0 is always in A).
+function ffAllSplits(n){
+  if(n<2)return [Array(n).fill(0)];
+  const out=[];
+  for(let m=0;m<(1<<n);m++){
+    if(m&1)continue;
+    const a=[...Array(n)].map((_,i)=>(m>>i)&1);
+    if(validSplit(a))out.push(a);
+  }
+  return out;
+}
+// Bot: as divider, minimise what the chooser gets, minus the tithe it earns.
+function ffDenySplit(hand){
+  let best=null,bs=Infinity;
+  for(const a of ffAllSplits(hand.length)){
+    const r0=ffResolve(hand,a,0),r1=ffResolve(hand,a,1);
+    const pick=r0.g>r1.g||(r0.g===r1.g&&r0.tithe<=r1.tithe)?r0:r1;
+    const s=pick.g-0.8*pick.tithe+rnd(10)/100;
+    if(s<bs){bs=s;best=a}
+  }
+  return best;
+}
+function ffSelfSplit(hand){
+  let best=null,bs=-1;
+  for(const a of ffAllSplits(hand.length)){const s=Math.max(ffResolve(hand,a,0).g,ffResolve(hand,a,1).g);if(s>bs){bs=s;best=a}}
+  return best;
+}
+function ffBotBuy(st){
+  const g=st.glamour,s=st.supply,r=st.round;
+  const want=[];
+  if(g>=8)want.push('gvow');
+  if(r>=5)want.push('vow');
+  want.push('mirror','change','hoard','witness','bell','hermit','grudge');
+  if(r<6)want.push('twin');
+  return want.find(k=>s[k]>0&&FFC[k].cost<=g);
+}
+
+const GAME={
+  key:'fair-folk',title:'Fair Folk',color:'var(--ff)',
+  hook:'Your opponent splits every hand you draw. You choose which half to play.',
+  turn:['Pick one of the two piles your opponent made from your hand, and play it.','Buy cards with Glamour.','Draw your opponent’s next hand and split it for them.'],
+  watch:'Does splitting feel like a puzzle or a chore? Which cards does the divider dread? Does anyone ever get to run a combo?',
+  rules:[
+    'Each player starts with 7 Pennies and 3 Small Vows. Hands are 5 cards.',
+    'The divider splits your hand into two piles of at least one card. You keep one pile and play it. The other pile is spurned: it does nothing except trigger "if spurned" text.',
+    'The divider earns a tithe of 1 Glamour per spurned card, banked for their next turn. Lopsided splits cost them.',
+    'Buy as many cards as you can afford. Bought cards go to your discard pile.',
+    'Vows score at the end and do nothing in hand, so they make your hands easier to split against you.',
+    'The game ends after the round in which the Grand Vows or any three piles run out, or after round 15. Most ★ wins.',
+    'Seat 1’s opening hand is split at random.',
+  ],
+  score:ffVP,
+  setup(){
+    const players=[0,1].map(()=>({deck:shuffle([...rep('penny',7),...rep('svow',3)]),discard:[],bank:0,selfSplit:false}));
+    const hand=draw(players[0],5);
+    return {turn:0,round:1,players,supply:{...FF_SUPPLY},offer:{seat:0,hand,assign:randSplit(hand.length),self:false},
+      phase:'choose',glamour:0,bought:[],log:['Seat 1’s opening hand was split at random.'],over:false,endTriggered:false};
+  },
+  view(st,ctx){
+    const me=st.turn,opp=1-me,L=ctx.label;
+    let h='';
+    if(!ctx.canAct){
+      h+=`<div class="panel"><p class="status">${st.over?'Game over.':`Waiting for ${L(me)}.`}</p>`;
+      if(!st.over&&st.offer&&st.phase==='choose')h+=`<p class="muted">${L(opp)} split this hand for ${L(me)}:</p>`+ffPiles(st.offer.hand,st.offer.assign,false,L(me));
+      h+=`<p class="muted">Banked tithe: ${L(0)} ${st.players[0].bank} · ${L(1)} ${st.players[1].bank}</p></div>`;
+      return h+`<div class="panel"><h3>Market</h3>${marketHTML(FFC,st.supply,0,false,'ffBuy')}</div>`;
+    }
+    const P=st.players[me];
+    if(st.phase==='ownsplit'){
+      h+=`<div class="panel"><h3>Your Witness lets you split your own hand</h3><p class="muted">Tap a card to move it to the other pile. Each pile needs at least one card.</p>
+        ${ffPiles(st.offer.hand,st.offer.assign,true,'you')}<div class="row"><button class="btn primary" data-a="ffLock">Lock in this split</button></div></div>`;
+    }else if(st.phase==='choose'){
+      const sp=st.offer.assign;
+      h+=`<div class="panel"><h3>${st.offer.self?'Your split':`${L(opp)} split your hand`}</h3>${ffPiles(st.offer.hand,sp,false,'you')}
+        <div class="row">${[0,1].map(k=>sp.includes(k)?`<button class="btn primary" data-a="ffKeep" data-i="${k}">Keep pile ${'AB'[k]}</button>`:'').join('')}
+        ${P.bank?`<span class="muted">Plus ${P.bank} banked tithe.</span>`:''}</div></div>`;
+    }else if(st.phase==='buy'){
+      h+=`<div class="panel"><div class="spread"><div><div class="label">Glamour to spend</div><div class="big">${st.glamour}</div></div>
+        <div class="row">${st.bought.length?`<span class="muted">Bought: ${st.bought.map(k=>FFC[k].n).join(', ')}</span>`:''}<button class="btn primary" data-a="ffDoneBuy">Done buying</button></div></div>
+        ${marketHTML(FFC,st.supply,st.glamour,true,'ffBuy')}</div>`;
+    }else if(st.phase==='split'){
+      const O=st.players[opp];
+      h+=`<div class="panel"><h3>Split ${L(opp)}’s next hand</h3>`+(O.selfSplit
+        ?`<p>${L(opp)} played a Witness, so they will split this hand themselves.</p><div class="row"><button class="btn primary" data-a="ffSend">End turn</button></div>`
+        :`<p class="muted">Tap a card to move it. They keep one pile. You earn 1 Glamour next turn per card in the pile they don’t keep.</p>
+          ${ffPiles(st.splitHand,st.splitAssign,true,L(opp))}<div class="row"><button class="btn primary" data-a="ffSend">Send split and end turn</button></div>`)+`</div>`;
+    }
+    h+=`<p class="muted">Your cards: ${P.deck.length+P.discard.length} · ${L(opp)}’s banked tithe: ${st.players[opp].bank}</p>`;
+    return h;
+  },
+  on:{
+    ffToggle(st,i){const a=st.phase==='split'?st.splitAssign:st.offer.assign;a[+i]=1-a[+i]},
+    ffLock(st){if(!validSplit(st.offer.assign))return toast('Each pile needs at least one card.');st.phase='choose'},
+    ffKeep(st,k,ctx){
+      k=+k;const me=st.turn,P=st.players[me],O=st.players[1-me];
+      const r=ffResolve(st.offer.hand,st.offer.assign,k),bank=P.bank;
+      st.glamour=r.g+bank;P.bank=0;O.bank+=r.tithe;P.discard.push(...st.offer.hand);
+      if(r.witness)P.selfSplit=true;
+      st.log.push(`${ctx.label(me)} kept pile ${'AB'[k]} (${r.kept.map(c=>FFC[c].n).join(', ')}) for ${r.g} Glamour${bank?` + ${bank} banked`:''}. ${ctx.label(1-me)} banks ${r.tithe} tithe.`);
+      st.offer=null;st.phase='buy';
+    },
+    ffBuy(st,key){
+      const c=FFC[key];if(st.glamour<c.cost||!st.supply[key])return;
+      st.glamour-=c.cost;st.supply[key]--;st.players[st.turn].discard.push(key);st.bought.push(key);
+      if(st.supply.gvow===0||emptyPiles(st.supply)>=3)st.endTriggered=true;
+    },
+    ffDoneBuy(st,_,ctx){
+      const opp=1-st.turn;
+      if(st.bought.length)st.log.push(`${ctx.label(st.turn)} bought ${st.bought.map(k=>FFC[k].n).join(', ')}.`);
+      st.bought=[];st.splitHand=draw(st.players[opp],5);st.splitAssign=defSplit(st.splitHand.length);st.phase='split';
+    },
+    ffSend(st){
+      const opp=1-st.turn,O=st.players[opp];
+      if(O.selfSplit){st.offer={seat:opp,hand:st.splitHand,assign:defSplit(st.splitHand.length),self:true};O.selfSplit=false}
+      else{
+        if(!validSplit(st.splitAssign))return toast('Each pile needs at least one card.');
+        st.offer={seat:opp,hand:st.splitHand,assign:st.splitAssign,self:false};
+      }
+      st.splitHand=null;st.splitAssign=null;st.glamour=0;st.phase=st.offer.self?'ownsplit':'choose';
+      return passTurn(st,15);
+    },
+  },
+  // One bot decision per call; returns 'commit' when its turn is over.
+  bot(st,ctx){
+    const on=GAME.on;
+    if(st.phase==='ownsplit'){st.offer.assign=ffSelfSplit(st.offer.hand);return on.ffLock(st)}
+    if(st.phase==='choose'){
+      const a=st.offer.assign,r=[0,1].map(k=>a.includes(k)?ffResolve(st.offer.hand,a,k).g:-1);
+      return on.ffKeep(st,r[1]>r[0]?1:0,ctx);
+    }
+    if(st.phase==='buy'){const k=st.bought.length<2&&ffBotBuy(st);return k?on.ffBuy(st,k):on.ffDoneBuy(st,0,ctx)}
+    if(st.phase==='split'){if(!st.players[1-st.turn].selfSplit)st.splitAssign=ffDenySplit(st.splitHand);return on.ffSend(st)}
+  },
+};
+
+// =====================================================================
+// Shell: lobby, local + online storage, bot and hotseat turns.
+// Local games (vs bot, hotseat) live in this browser. Online games need the
+// Claude artifact runtime (window.claude) and are shared through its db.
+// =====================================================================
+const HUB='https://dyrota.github.io/prototypes/';
+const $app=document.getElementById('app');
+const LS='proto-'+GAME.key+'-games';
+let DB=null,USER=null,ME=null,ONLINE=false,CANWRITE=true;
+let LOCAL={},REMOTE={},names={};
+let view={screen:'lobby',id:null},work=null,workKey=null,confirmDel=null,handoff=null,botTimer=null;
+
+function lsLoad(){try{return JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){return {}}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify(LOCAL))}catch(e){}}
+const getGame=id=>LOCAL[id]||REMOTE[id];
+const isLocal=g=>g.mode==='local';
+const vsBot=g=>isLocal(g)&&g.seats.includes('bot');
+
+function seatLabel(g,i){
+  const s=g.seats[i];
+  if(isLocal(g))return s==='bot'?'Bot':vsBot(g)?'You':`Seat ${i+1}`;
+  if(!s)return 'Open seat';
+  if(s===ME)return g.seats[0]===g.seats[1]?`You (seat ${i+1})`:'You';
+  return clean(names[s]||'Opponent');
+}
+function canActIn(g,st){
+  if(st.over||g.status==='done')return false;
+  const s=g.seats[st.turn];
+  return isLocal(g)?s==='h':CANWRITE&&s===ME;
+}
+function gameCtx(g){const st=work||g.state;return {canAct:canActIn(g,st),label:i=>seatLabel(g,i)}}
+function statusFor(g){
+  const st=g.state;
+  if(st.over||g.status==='done')return {cls:'done',txt:'Finished'};
+  if(g.seats[st.turn]==='bot')return {cls:'wait',txt:'Bot is playing'};
+  if(canActIn(g,st))return {cls:'go',txt:isLocal(g)&&!vsBot(g)?`Seat ${st.turn+1} to play`:'Your turn'};
+  if(!g.seats[1]&&st.turn===1)return {cls:'wait',txt:'Waiting for an opponent'};
+  return {cls:'wait',txt:`${seatLabel(g,st.turn)} to play`};
+}
+function modeName(g){return isLocal(g)?(vsBot(g)?'vs bot':'hotseat'):'online'}
+
+function render(){
+  if(view.screen==='game'&&getGame(view.id))renderGame();
+  else{view={screen:'lobby',id:null};renderLobby()}
+}
+
+function gameItem(id,g,join){
+  const s=statusFor(g),st=g.state;
+  return `<div class="gitem"><span class="dot"></span>
+    <div><b>${seatLabel(g,0)} ${GAME.score(st,0)} – ${GAME.score(st,1)} ${seatLabel(g,1)}</b> <span class="muted">· ${modeName(g)} · round ${st.round}</span></div>
+    <div class="row">${join?(CANWRITE?`<button class="btn small primary" data-a="join" data-i="${id}">Join</button>`:''):`<span class="pill ${s.cls}">${s.txt}</span>`}
+      <button class="btn small" data-a="open" data-i="${id}">${join?'Watch':'Open'}</button>
+      ${!join&&(isLocal(g)||g.createdBy===ME)?`<button class="btn small ghost" data-a="del" data-i="${id}">${confirmDel===id?'Confirm delete':'Delete'}</button>`:''}</div></div>`;
+}
+
+function renderLobby(){
+  const mine=[],open=[];
+  for(const [id,g] of Object.entries(LOCAL))mine.push([id,g]);
+  for(const [id,g] of Object.entries(REMOTE)){
+    if(g.seats.includes(ME))mine.push([id,g]);
+    else if(!g.seats[1]&&g.status!=='done')open.push([id,g]);
+  }
+  const rank=g=>statusFor(g).cls==='go'?0:statusFor(g).cls==='wait'?1:2;
+  mine.sort((a,b)=>rank(a[1])-rank(b[1])||(b[1].updatedAt||0)-(a[1].updatedAt||0));
+  $app.innerHTML=`
+  <header class="intro">
+    <a class="back" href="${HUB}" target="_top">← All prototypes</a>
+    <h1>${GAME.title}</h1>
+    <p class="hook">${GAME.hook}</p>
+  </header>
+  <section class="panel"><h2>Play</h2>
+    <div class="row">
+      <button class="btn primary" data-a="new" data-i="bot">Play vs bot</button>
+      <button class="btn" data-a="new" data-i="hot">Hotseat: 2 players, 1 device</button>
+      ${ONLINE&&CANWRITE?`<button class="btn" data-a="new" data-i="online">New online game</button><button class="btn" data-a="new" data-i="solo">Online, both seats</button>`:''}
+    </div>
+    <p class="mode">${ONLINE
+      ?'<b>Online games are shared through this page.</b> Anyone it’s shared with at Contributor access can join an open seat and play their turns whenever they like.'
+      :'Bot and hotseat games are saved in this browser. For async online play, open the Claude artifact version of this game.'}</p>
+  </section>
+  <div class="two">
+    <section class="panel"><h3>A turn</h3><ol>${GAME.turn.map(t=>`<li>${t}</li>`).join('')}</ol></section>
+    <section class="panel"><h3>Test for</h3><p class="watch">${GAME.watch}</p></section>
+  </div>
+  <section class="panel"><h2>Your games</h2>${mine.length?`<div class="glist">${mine.map(([id,g])=>gameItem(id,g,false)).join('')}</div>`:'<p class="muted">No games yet. Start one above.</p>'}</section>
+  ${ONLINE?`<section class="panel"><h2>Open seats</h2>${open.length?`<div class="glist">${open.map(([id,g])=>gameItem(id,g,true)).join('')}</div>`:'<p class="muted">No one is waiting for an opponent right now.</p>'}</section>`:''}
+  <section class="panel"><h2>Rules</h2><ul class="rules">${GAME.rules.map(r=>`<li>${r}</li>`).join('')}</ul></section>`;
+}
+
+function renderGame(){
+  const g=getGame(view.id),key=view.id+':'+(g.v||0);
+  if(workKey!==key){work=clone(g.state);workKey=key}
+  const st=work,ctx=gameCtx(g),s=statusFor(g),iAmIn=!isLocal(g)&&g.seats.includes(ME);
+  let banner;
+  if(st.over){const a=GAME.score(st,0),b=GAME.score(st,1);banner=a===b?`Tied at ${a} ★.`:`${ctx.label(a>b?0:1)} won, ${Math.max(a,b)} to ${Math.min(a,b)}.`}
+  else if(g.seats[st.turn]==='bot')banner='The bot is taking its turn…';
+  else if(ctx.canAct)banner=isLocal(g)&&!vsBot(g)?`Seat ${st.turn+1}, your turn.`:'Your turn.';
+  else if(!isLocal(g)&&!g.seats[1])banner=iAmIn?'Waiting for someone to join. They’ll take seat 2.':'Seat 2 is open.';
+  else banner=`${ctx.label(st.turn)} to play.`;
+  const showHandoff=handoff===view.id&&!st.over;
+  $app.innerHTML=`
+  <section class="panel gbar">
+    <div class="spread"><button class="btn ghost small" data-a="lobby">← ${GAME.title} games</button><span class="muted">${modeName(g)} · round ${st.round}</span></div>
+    <div class="seats">${[0,1].map(i=>`<div class="seat ${st.turn===i&&!st.over?'on':''}"><span>${ctx.label(i)}${st.turn===i&&!st.over?' <span class="muted">· to play</span>':''}</span><span class="score">${GAME.score(st,i)} ★</span></div>`).join('')}</div>
+    <div class="spread"><p class="status">${banner}</p><div class="row">
+      ${!isLocal(g)&&!g.seats[1]&&CANWRITE?(iAmIn?`<button class="btn small" data-a="solo" data-i="${view.id}">Take seat 2 myself</button>`:`<button class="btn small primary" data-a="join" data-i="${view.id}">Join as seat 2</button>`):''}
+      ${ctx.canAct&&!showHandoff?`<button class="btn small ghost" data-a="undo">Restart this turn</button>`:''}
+      ${st.over?`<button class="btn small primary" data-a="rematch">Rematch</button>`:''}</div></div>
+    <details class="rules"><summary>Rules</summary><ul>${GAME.rules.map(r=>`<li>${r}</li>`).join('')}</ul></details>
+  </section>
+  ${showHandoff
+    ?`<section class="panel handoff"><h2>Seat ${st.turn+1}’s turn</h2><p>Pass the device to seat ${st.turn+1}, then tap Ready.</p><div class="row"><button class="btn primary" data-a="ready">Ready</button></div></section>`
+    :`<div class="board">${GAME.view(st,ctx)}</div>`}
+  <section class="panel"><h3>Log</h3><div class="log">${st.log.slice(-14).reverse().map(l=>`<div>${esc(l)}</div>`).join('')||'<span>Nothing yet.</span>'}</div></section>`;
+  if(vsBot(g)&&g.seats[st.turn]==='bot'&&!st.over&&!botTimer)botTimer=setTimeout(runBot,700);
+}
+
+function runBot(){
+  botTimer=null;
+  const id=view.id,g=getGame(id);
+  if(!g||!vsBot(g)||g.state.over||g.seats[g.state.turn]!=='bot')return;
+  const w=clone(g.state),ctx={canAct:true,label:i=>seatLabel(g,i)};
+  for(let n=0;n<300;n++){if(GAME.bot(w,ctx)==='commit')break}
+  const doc=clone(g);doc.state=w;if(w.over)doc.status='done';
+  saveGame(id,doc);
+}
+
+async function saveGame(id,doc){
+  doc.updatedAt=Date.now();doc.v=(doc.v||0)+1;
+  if(doc.state.log.length>40)doc.state.log=doc.state.log.slice(-40);
+  if(isLocal(doc)){LOCAL[id]=doc;lsSave();render();return}
+  const prev=REMOTE[id];REMOTE[id]=doc;render();
+  try{await DB.doc('games/'+id).set(doc)}
+  catch(e){
+    if(prev)REMOTE[id]=prev;else delete REMOTE[id];workKey=null;render();
+    toast(e&&e.code==='invalid_argument'?'You can’t save here. Ask the owner for Contributor access.'
+      :e&&e.code==='quota_exceeded'?'This page is full. Delete some old games.'
+      :'Couldn’t save. Check your connection and try again.');
+  }
+}
+function newGame(kind){
+  const id=newId(),base={type:GAME.key,createdAt:Date.now(),state:GAME.setup()};
+  let doc;
+  if(kind==='bot')doc={...base,mode:'local',seats:['h','bot'],status:'active'};
+  else if(kind==='hot')doc={...base,mode:'local',seats:['h','h'],status:'active'};
+  else doc={...base,mode:'online',seats:[ME,kind==='solo'?ME:null],createdBy:ME,status:kind==='solo'?'active':'open'};
+  view={screen:'game',id};workKey=null;handoff=null;setHash(id);saveGame(id,doc);window.scrollTo(0,0);
+}
+async function claimSeat(id,asSolo){
+  if(!ONLINE)return;
+  const ref=DB.doc('games/'+id);
+  try{
+    const l=await ref.acquire({holder:ME,ttlMs:5000});
+    if(!l.acquired)return toast('Someone else is joining right now. Try again in a few seconds.');
+    const snap=await ref.get(),d=snap.exists?clone(snap.data()):null;
+    if(!d||d.seats[1])return toast('That seat was just taken.');
+    if(!asSolo&&d.seats[0]===ME)return;
+    d.seats=[d.seats[0],ME];d.status='active';
+    view={screen:'game',id};setHash(id);await saveGame(id,d);
+  }catch(e){toast('Couldn’t join that game. Try again.')}
+}
+function setHash(id){try{history.replaceState(null,'',id?'#'+id:location.pathname+location.search)}catch(e){}}
+
+const GLOBAL={
+  new:kind=>newGame(kind),
+  open:id=>{view={screen:'game',id};workKey=null;handoff=null;setHash(id);render();window.scrollTo(0,0)},
+  lobby:()=>{view={screen:'lobby',id:null};handoff=null;setHash(null);render()},
+  join:id=>claimSeat(id,false),
+  solo:id=>claimSeat(id,true),
+  undo:()=>{workKey=null;render()},
+  ready:()=>{handoff=null;render()},
+  rematch:()=>{const g=getGame(view.id);newGame(isLocal(g)?(vsBot(g)?'bot':'hot'):g.seats[0]===g.seats[1]?'solo':'online')},
+  del:async id=>{
+    if(confirmDel!==id){confirmDel=id;render();setTimeout(()=>{if(confirmDel===id){confirmDel=null;render()}},4000);return}
+    confirmDel=null;
+    if(LOCAL[id]){delete LOCAL[id];lsSave();render();return}
+    const prev=REMOTE[id];delete REMOTE[id];render();
+    try{await DB.doc('games/'+id).delete()}catch(e){REMOTE[id]=prev;render();toast('Couldn’t delete that game.')}
+  },
+};
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
+  const a=b.dataset.a,arg=b.dataset.i;
+  if(GLOBAL[a])return GLOBAL[a](arg);
+  const g=getGame(view.id);if(!g)return;
+  const ctx=gameCtx(g),h=GAME.on[a];
+  if(!h||!ctx.canAct)return;
+  if(h(work,arg,ctx)==='commit'){
+    const doc=clone(g);doc.state=clone(work);if(work.over)doc.status='done';
+    if(isLocal(doc)&&!vsBot(doc)&&!work.over)handoff=view.id;
+    await saveGame(view.id,doc);window.scrollTo(0,0);
+  }else render();
+});
+
+async function refreshNames(){
+  if(!USER)return;
+  const ids=new Set();
+  Object.values(REMOTE).forEach(g=>g.seats.forEach(s=>{if(s&&s!==ME&&!(s in names))ids.add(s)}));
+  if(!ids.size)return;
+  ids.forEach(id=>names[id]='');
+  try{const ps=await USER.profiles([...ids]);for(const id of ids)names[id]=(ps&&ps[id]&&ps[id].name)||'';render()}catch(e){}
+}
+async function init(){
+  LOCAL=lsLoad();
+  const h=(location.hash||'').slice(1);
+  if(h&&LOCAL[h])view={screen:'game',id:h};
+  render();
+  const cl=window.claude;if(!cl||!cl.use)return;
+  const [db,user]=await Promise.all([cl.use('db'),cl.use('user')]);
+  if(!db||!user)return;
+  const id=await user.id();if(!id)return;
+  DB=db;USER=user;ME=id;ONLINE=true;
+  try{if(await user.can('data.write')===false)CANWRITE=false}catch(e){}
+  render();
+  let first=true;
+  db.collection('games').onSnapshot(snap=>{
+    const next={};
+    snap.docs.forEach(d=>{const v=d.data();if(v&&v.state&&v.type===GAME.key)next[d.id]=v});
+    REMOTE=next;
+    if(first){first=false;if(h&&REMOTE[h]&&view.screen==='lobby')view={screen:'game',id:h}}
+    refreshNames();render();
+  },()=>toast('Lost the connection to shared games. Reload to reconnect.'));
+}
+init();
+
+</script>
+
+</body></html>

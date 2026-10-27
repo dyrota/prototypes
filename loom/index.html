@@ -1,0 +1,581 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>Loom</title>
+<meta name="description" content="Async deckbuilder prototype: every card links two symbols, and you continue the thread your opponent left.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column card table: lobby (play options, rules, games) then a board per game. */
+:root{
+  --bg:#E9EEEA; --surface:#F8FAF7; --surface2:#FFFFFF; --ink:#1B2320; --muted:#5A6661; --line:#C9D3CD;
+  --accent:#2D5E8C; --accent-ink:#FFFFFF; --good:#2E7D4F; --bad:#B0413E;
+  --ff:#7B4FA3; --lm:#1E7A70; --rl:#A0640F;
+  --pA:#2D5E8C; --pB:#A0640F;
+  --sS:#B9800A; --sM:#5463B5; --sL:#3A8747; --sW:#23809F;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111715; --surface:#19211E; --surface2:#202A26; --ink:#E4EBE7; --muted:#97A49E; --line:#2E3934;
+  --accent:#86AEDB; --accent-ink:#0E1A26; --good:#6CC08E; --bad:#E58A86;
+  --ff:#BB98DD; --lm:#5CC4B7; --rl:#E2A64E; --pA:#86AEDB; --pB:#E2A64E;
+  --sS:#E3B23C; --sM:#9AA6F0; --sL:#79C487; --sW:#62BFDD; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111715; --surface:#19211E; --surface2:#202A26; --ink:#E4EBE7; --muted:#97A49E; --line:#2E3934;
+  --accent:#86AEDB; --accent-ink:#0E1A26; --good:#6CC08E; --bad:#E58A86;
+  --ff:#BB98DD; --lm:#5CC4B7; --rl:#E2A64E; --pA:#86AEDB; --pB:#E2A64E;
+  --sS:#E3B23C; --sM:#9AA6F0; --sL:#79C487; --sW:#62BFDD; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+#app{--c:var(--lm);max-width:1080px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:clamp(32px,6vw,48px);font-weight:700;letter-spacing:-.01em;color:var(--c)}
+h2{font-size:22px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+a{color:var(--accent)}
+.muted{color:var(--muted)}
+.mono,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 14px;font-weight:700}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{padding:4px 10px;font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.spread{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.intro{display:flex;flex-direction:column;gap:8px;max-width:68ch;padding-top:4px}
+.intro .hook{font-size:18px}
+.back{font-size:13px;font-weight:700;text-decoration:none}
+.mode{font-size:13px;color:var(--muted)}
+.mode b{color:var(--ink)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+ol,ul.rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.watch{border-left:3px solid var(--c);padding-left:10px}
+.glist{display:flex;flex-direction:column;gap:8px}
+.gitem{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.gitem .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.pill.go{background:var(--good);color:var(--surface2);border-color:var(--good)}
+.pill.wait{color:var(--muted)}
+.pill.done{color:var(--muted);border-style:dashed}
+.gbar{border-top:6px solid var(--c)}
+.seats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seat{border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface2)}
+.seat.on{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}
+.seat .score{font-family:var(--mono);font-size:20px}
+.status{font-weight:700}
+details.rules summary{cursor:pointer;font-weight:700}
+details.rules ul{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.board{display:flex;flex-direction:column;gap:16px}
+.handoff{align-items:flex-start;padding-block:40px;border-top:6px solid var(--c)}
+.cards{display:flex;flex-wrap:wrap;gap:10px}
+.card{width:136px;min-height:150px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);padding:9px 10px;display:flex;flex-direction:column;gap:6px;text-align:left;position:relative}
+button.card:hover:not(:disabled){border-color:var(--accent)}
+button.card:disabled{cursor:default}
+.card .top{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
+.card .nm{font-family:var(--display);font-weight:700;font-size:15px;line-height:1.15}
+.card .cost{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:6px;padding:0 6px;white-space:nowrap}
+.card .tx{font-size:12.5px;color:var(--muted);line-height:1.35}
+.card .stat{font-family:var(--mono);font-size:13px;margin-top:auto}
+.card.dim{opacity:.4}
+.card.hot{border-color:var(--good);box-shadow:inset 0 0 0 1px var(--good)}
+.card.pA{border-top:5px solid var(--pA)}
+.card.pB{border-top:5px solid var(--pB)}
+.card .left{font-size:11px;color:var(--muted)}
+.cards.mini .card{width:112px;min-height:0}
+.piles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pile{border:2px dashed var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.pile.A{border-color:var(--pA)} .pile.B{border-color:var(--pB)}
+.pile h3.A{color:var(--pA)} .pile h3.B{color:var(--pB)}
+.calc{font-size:13px;color:var(--muted)}
+.calc b{color:var(--ink);font-family:var(--mono)}
+.big{font-family:var(--mono);font-size:26px;line-height:1}
+.mkt{display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:10px}
+.mkt .card{width:auto}
+.sym{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;font-size:16px;color:#fff;font-weight:700;line-height:1}
+.sym.S{background:var(--sS)} .sym.M{background:var(--sM)} .sym.L{background:var(--sL)} .sym.W{background:var(--sW)}
+.sym.any{background:transparent;color:var(--ink);border:1.5px dashed var(--muted);font-size:13px}
+.weave{display:flex;align-items:center;gap:6px;font-family:var(--mono);color:var(--muted)}
+.thread{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);min-height:52px}
+.knot{display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);font-size:13px}
+.knot.dead{opacity:.5;text-decoration:line-through}
+.ladder{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.rung{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;background:var(--surface2);display:flex;flex-direction:column;gap:2px}
+.rung.now{border-color:var(--c);box-shadow:inset 0 0 0 2px var(--c)}
+.rung .r{display:flex;gap:6px}
+.res{font-family:var(--mono);font-size:12px;padding:0 5px;border-radius:4px}
+.res.W{color:var(--good);border:1px solid var(--good)} .res.L{color:var(--bad);border:1px solid var(--bad)}
+.log{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;z-index:20;max-width:calc(100% - 32px)}
+.ok{color:var(--good)} .no{color:var(--bad)}
+@media (max-width:560px){.piles,.seats{grid-template-columns:1fr}.card{width:calc(50% - 5px)}.gitem{grid-template-columns:auto 1fr}.gitem .row{grid-column:1/-1}}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .12s, box-shadow .12s}}
+</style>
+<div id="app"><p class="muted">Loading…</p></div>
+<script>
+// ---------- shared helpers (used by every game engine and the shell) ----------
+const rnd=n=>Math.floor(Math.random()*n);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+const rep=(k,n)=>Array(n).fill(k);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clean=s=>String(s).replace(/[<>&"']/g,'');
+const newId=()=>'g'+Math.random().toString(36).slice(2,10);
+const emptyPiles=s=>Object.values(s).filter(v=>v===0).length;
+
+function draw(p,n){
+  const out=[];
+  for(let k=0;k<n;k++){
+    if(!p.deck.length){if(!p.discard.length)break;p.deck=shuffle(p.discard);p.discard=[]}
+    out.push(p.deck.pop());
+  }
+  return out;
+}
+// Seat 2 closes each round; the game ends at the close of the round where the end was triggered.
+function passTurn(st,maxRounds){
+  const was=st.turn;st.turn=1-was;
+  if(was===1){if(st.endTriggered||st.round>=maxRounds)st.over=true;else st.round++}
+  return 'commit';
+}
+
+let toastTimer;
+function toast(msg){
+  if(typeof document==='undefined')return;
+  let t=document.querySelector('.toast');
+  if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}
+  t.textContent=msg;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.remove(),3200);
+}
+function cardHTML(def,o={}){
+  const tag=o.btn?'button':'div';
+  return `<${tag} class="card ${o.cls||''}" ${o.attrs||''} ${o.btn&&o.disabled?'disabled':''}>
+    <div class="top"><span class="nm">${def.n}</span>${def.cost?`<span class="cost">${def.cost}</span>`:''}</div>
+    ${o.face||''}<div class="tx">${def.txt||''}</div>${o.foot?`<div class="stat">${o.foot}</div>`:''}</${tag}>`;
+}
+function marketHTML(defs,supply,glam,canAct,action){
+  return `<div class="mkt">${Object.keys(supply).map(k=>{
+    const d=defs[k],ok=canAct&&supply[k]>0&&glam>=d.cost;
+    return cardHTML(d,{btn:true,disabled:!ok,cls:ok?'':'dim',face:d.face||'',
+      attrs:`data-a="${action}" data-i="${k}" aria-label="Buy ${d.n} for ${d.cost}"`,
+      foot:`<span class="left">${supply[k]} left</span>`});
+  }).join('')}</div>`;
+}
+
+// =====================================================================
+// LOOM: each card is a link; you continue the thread your opponent left.
+// =====================================================================
+const SYM={S:'☀',M:'☾',L:'❦',W:'≈'};
+const SYMNAME={S:'Sun',M:'Moon',L:'Leaf',W:'Wave'};
+const symH=s=>s==='*'?'<span class="sym any" title="any symbol">✱</span>'
+  :s==='='?'<span class="sym any" title="same as incoming">=</span>'
+  :`<span class="sym ${s}" title="${SYMNAME[s]}">${SYM[s]}</span>`;
+const LMC={
+  spSM:{n:'Spindle',in:'S',out:'M',g:1},spML:{n:'Spindle',in:'M',out:'L',g:1},spLW:{n:'Spindle',in:'L',out:'W',g:1},spWS:{n:'Spindle',in:'W',out:'S',g:1},
+  spSL:{n:'Spindle',in:'S',out:'L',g:1},spMW:{n:'Spindle',in:'M',out:'W',g:1},spLS:{n:'Spindle',in:'L',out:'S',g:1},spWM:{n:'Spindle',in:'W',out:'M',g:1},
+  knot:{n:'Knot',in:'*',out:'=',g:0,txt:'Matches anything and passes the symbol through.'},
+  silk:{n:'Silk',cost:2,in:'S',out:'M',g:2},
+  copper:{n:'Copper Thread',cost:2,in:'M',out:'W',g:2},
+  silver:{n:'Silver Thread',cost:2,in:'W',out:'L',g:2},
+  moss:{n:'Moss Thread',cost:2,in:'L',out:'S',g:2},
+  bobbin:{n:'Bobbin',cost:3,in:'M',out:'S',g:0,draw:1,txt:'Draw 1 card.'},
+  shuttle:{n:'Shuttle',cost:3,in:'L',out:'W',g:0,draw:1,txt:'Draw 1 card.'},
+  snarl:{n:'Snarl',cost:3,in:'S',out:'W',g:1,txt:'If your thread ends on this, your opponent loses a random card from their next hand.'},
+  gold:{n:'Gold Thread',cost:4,in:'*',out:'=',g:2,txt:'Matches anything and passes the symbol through.'},
+  mark:{n:'Weaver’s Mark',cost:4,in:'*',out:'*',g:1,txt:'Matches anything. You choose the outgoing symbol.'},
+  tapestry:{n:'Tapestry',cost:5,in:'W',out:'S',vp:2},
+  banner:{n:'Banner',cost:5,in:'M',out:'L',vp:2},
+  master:{n:'Masterwork',cost:8,in:'*',out:'*',vp:4,txt:'Matches anything. You choose the outgoing symbol.'},
+};
+for(const d of Object.values(LMC)){
+  const bits=[];
+  if(d.g)bits.push(`+${d.g} Glamour.`);
+  if(d.vp)bits.push(`${d.vp} ★ each time you weave it.`);
+  if(d.txt)bits.push(d.txt);
+  d.txt=bits.join(' ');
+  d.face=`<div class="weave">${symH(d.in)}→${symH(d.out)}</div>`;
+}
+const LM_SUPPLY={silk:6,copper:6,silver:6,moss:6,bobbin:5,shuttle:5,snarl:5,gold:5,mark:5,tapestry:6,banner:6,master:4};
+const lmBonus=n=>n>=6?4:n===5?2:n===4?1:0;
+const lmCur=st=>st.chain.length?st.chain[st.chain.length-1].out:st.end;
+const lmMatch=(c,cur)=>c.in==='*'||c.in===cur;
+function lmApply(st,i,chosen){
+  const P=st.players[st.turn],key=P.hand.splice(i,1)[0],c=LMC[key],cur=lmCur(st);
+  const match=lmMatch(c,cur),inS=c.in==='*'?cur:c.in;
+  const out=c.out==='='?inS:c.out==='*'?chosen:c.out;
+  st.chain.push({k:key,out,dead:!match});
+  if(match){
+    st.glamour+=c.g||0;
+    if(c.vp){P.score+=c.vp;st.vpGained+=c.vp}
+    if(c.draw)P.hand.push(...draw(P,c.draw));
+  }
+}
+function lmInCounts(pl){
+  const c={S:0,M:0,L:0,W:0,'*':0};
+  pl.deck.concat(pl.discard,pl.hand).forEach(k=>c[LMC[k].in]++);
+  return c;
+}
+// Bot: search every playable ordering of the hand (draws ignored) and score the thread.
+function lmPlan(hand,cur,oppIn,startLen){
+  let best={score:-1,seq:[]};
+  const total=Object.values(oppIn).reduce((a,b)=>a+b,0)||1;
+  (function dfs(used,cur,seq,val){
+    const len=startLen+seq.length;
+    const endPen=seq.length?3*((oppIn[cur]||0)+(oppIn['*']||0))/total:0;
+    const sc=val+lmBonus(len)*2.5-endPen+seq.length*0.01;
+    if(sc>best.score)best={score:sc,seq:seq.slice()};
+    hand.forEach((k,i)=>{
+      if(used&(1<<i))return;
+      const c=LMC[k];if(!lmMatch(c,cur))return;
+      const inS=c.in==='*'?cur:c.in;
+      const outs=c.out==='*'?['S','M','L','W']:[c.out==='='?inS:c.out];
+      for(const o of outs){seq.push({i,out:o});dfs(used|(1<<i),o,seq,val+(c.g||0)+(c.vp||0)*2.5+(c.draw?1.5:0));seq.pop()}
+    });
+  })(0,cur,[],0);
+  return best;
+}
+function lmBotBuy(st){
+  const g=st.glamour,s=st.supply;
+  const order=['master','tapestry','banner','gold','mark','bobbin','shuttle','snarl','silk','copper','silver','moss'];
+  return order.find(k=>s[k]>0&&LMC[k].cost<=g&&(LMC[k].cost>=g-2||g<4));
+}
+
+const GAME={
+  key:'loom',title:'Loom',color:'var(--lm)',
+  hook:'Every card is a link from one symbol to another. You start your turn wherever your opponent left the thread.',
+  turn:['Continue the shared thread from the symbol your opponent ended on, matching card to card.','Score Glamour, ★ and a bonus for long threads, then buy.','The symbol you end on is where your opponent must start.'],
+  watch:'Do you feel the pull between a long thread and a nasty ending symbol? Do turns fizzle when you inherit a bad symbol?',
+  rules:[
+    'Each card shows an incoming symbol → an outgoing symbol. ✱ matches anything; = passes the incoming symbol through.',
+    'Your first card must match the symbol your opponent ended on. If it doesn’t, you may still play it as a restart: it sets the thread but gives nothing.',
+    'After that, each card must match the outgoing symbol of the card before it. Stop whenever you like.',
+    'Thread bonus: 4 cards +1 ★, 5 cards +2 ★, 6 or more +4 ★.',
+    '★ cards score every time you weave them, so they compound.',
+    'Leftover cards are discarded. Draw 5 at the end of your turn.',
+    'The game ends after the round in which the Masterworks or any two piles run out, or after round 14.',
+  ],
+  score:(st,i)=>st.players[i].score,
+  setup(){
+    const starter=['spSM','spML','spLW','spWS','spSL','spMW','spLS','spWM','knot','knot'];
+    const players=[0,1].map(()=>{const p={deck:shuffle(starter.slice()),discard:[],hand:[],score:0};p.hand=draw(p,5);return p});
+    return {turn:0,round:1,players,supply:{...LM_SUPPLY},end:'SMLW'[rnd(4)],endBy:null,chain:[],phase:'weave',glamour:0,vpGained:0,
+      bought:[],pending:null,log:['The thread starts on a random symbol.'],over:false,endTriggered:false};
+  },
+  view(st,ctx){
+    const me=st.turn,opp=1-me,L=ctx.label,P=st.players[me],O=st.players[opp];
+    const thread=`<div class="thread"><span class="label">${st.endBy==null?'Start':`${L(st.endBy)} left`}</span>${symH(st.end)}${st.chain.map(x=>`<span class="muted">→</span><span class="knot ${x.dead?'dead':''}">${LMC[x.k].n} ${symH(x.out)}</span>`).join('')}</div>`;
+    const oc=lmInCounts(O);
+    const oppInfo=`${L(opp)}’s cards can start on: ${['S','M','L','W'].map(s=>`${symH(s)} <span class="num">${oc[s]}</span>`).join(' · ')} · ✱ <span class="num">${oc['*']}</span>`;
+    if(!ctx.canAct){
+      return `<div class="panel"><p class="status">${st.over?'Game over.':`Waiting for ${L(me)}.`}</p>${thread}</div>
+        <div class="panel"><h3>Market</h3>${marketHTML(LMC,st.supply,0,false,'lmBuy')}</div>`;
+    }
+    let h='';
+    if(st.phase==='weave'){
+      const cur=lmCur(st),first=!st.chain.length;
+      h+=`<div class="panel"><div class="spread"><h3>Weave from ${symH(cur)}</h3><span class="muted">Glamour <b class="num">${st.glamour}</b> · ★ this turn <b class="num">${st.vpGained}</b> · thread bonus <b class="num">+${lmBonus(st.chain.length)}</b></span></div>${thread}`;
+      if(st.pending!=null){
+        h+=`<div class="row"><span>Choose the outgoing symbol for ${LMC[P.hand[st.pending]].n}:</span>${['S','M','L','W'].map(s=>`<button class="btn small" data-a="lmOut" data-i="${s}" aria-label="${SYMNAME[s]}">${symH(s)}</button>`).join('')}<button class="btn ghost small" data-a="lmCancel">Cancel</button></div>`;
+      }
+      h+=`<div class="cards">${P.hand.map((k,i)=>{
+          const c=LMC[k],ok=lmMatch(c,cur),can=ok||first;
+          return cardHTML(c,{btn:true,disabled:!can||st.pending!=null,cls:ok?'hot':can?'':'dim',face:c.face,attrs:`data-a="lmPlay" data-i="${i}"`,foot:!ok&&first?'<span class="left">Restart: no effect</span>':''});
+        }).join('')||'<p class="muted">No cards left in hand.</p>'}</div>
+        <div class="row"><button class="btn primary" data-a="lmFinish">Finish thread</button><span class="muted">Ending on ${symH(cur)}. ${oppInfo}</span></div></div>`;
+    }else{
+      h+=`<div class="panel"><div class="spread"><div><div class="label">Glamour to spend</div><div class="big">${st.glamour}</div></div>
+        <div class="row">${st.bought.length?`<span class="muted">Bought: ${st.bought.map(k=>LMC[k].n).join(', ')}</span>`:''}<button class="btn primary" data-a="lmEnd">End turn</button></div></div>${thread}
+        ${marketHTML(LMC,st.supply,st.glamour,true,'lmBuy')}</div>`;
+    }
+    return h;
+  },
+  on:{
+    lmPlay(st,i){
+      i=+i;const P=st.players[st.turn],c=LMC[P.hand[i]];
+      if(!lmMatch(c,lmCur(st))&&st.chain.length)return;
+      if(c.out==='*'){st.pending=i;return}
+      lmApply(st,i,null);
+    },
+    lmOut(st,s){if(st.pending==null)return;const i=st.pending;st.pending=null;lmApply(st,i,s)},
+    lmCancel(st){st.pending=null},
+    lmFinish(st,_,ctx){
+      const P=st.players[st.turn],b=lmBonus(st.chain.length);P.score+=b;
+      st.log.push(`${ctx.label(st.turn)} wove ${st.chain.length} card${st.chain.length===1?'':'s'} for ${st.glamour} Glamour and ${st.vpGained+b} ★${b?` (thread bonus ${b})`:''}${st.chain.length?`, ending on ${SYM[lmCur(st)]}`:''}.`);
+      st.pending=null;st.phase='buy';
+    },
+    lmBuy(st,key){
+      const c=LMC[key];if(st.glamour<c.cost||!st.supply[key])return;
+      st.glamour-=c.cost;st.supply[key]--;st.players[st.turn].discard.push(key);st.bought.push(key);
+      if(st.supply.master===0||emptyPiles(st.supply)>=2)st.endTriggered=true;
+    },
+    lmEnd(st,_,ctx){
+      const me=st.turn,P=st.players[me],O=st.players[1-me];
+      if(st.bought.length)st.log.push(`${ctx.label(me)} bought ${st.bought.map(k=>LMC[k].n).join(', ')}.`);
+      if(st.chain.length){
+        const last=st.chain[st.chain.length-1];st.end=last.out;st.endBy=me;
+        if(last.k==='snarl'&&!last.dead&&O.hand.length){
+          const lost=O.hand.splice(rnd(O.hand.length),1)[0];O.discard.push(lost);
+          st.log.push(`Snarl: ${ctx.label(1-me)} loses ${LMC[lost].n} from their next hand.`);
+        }
+      }
+      P.discard.push(...P.hand,...st.chain.map(x=>x.k));P.hand=draw(P,5);
+      Object.assign(st,{chain:[],glamour:0,vpGained:0,bought:[],pending:null,phase:'weave'});
+      return passTurn(st,14);
+    },
+  },
+  bot(st,ctx){
+    const on=GAME.on,P=st.players[st.turn];
+    if(st.phase==='buy'){const k=st.bought.length<2&&lmBotBuy(st);return k?on.lmBuy(st,k):on.lmEnd(st,0,ctx)}
+    const oppIn=lmInCounts(st.players[1-st.turn]),cur=lmCur(st);
+    if(!st.chain.length&&P.hand.length&&!P.hand.some(k=>lmMatch(LMC[k],cur))){
+      // Nothing matches: pick the restart card that opens the best thread.
+      let bi=-1,bs=1;
+      P.hand.forEach((k,i)=>{
+        const c=LMC[k];if(c.out==='*'||c.out==='=')return;
+        const rest=P.hand.filter((_,j)=>j!==i),s=lmPlan(rest,c.out,oppIn,1).score-(c.g||0)-(c.vp||0)*2.5;
+        if(s>bs){bs=s;bi=i}
+      });
+      if(bi<0)return on.lmFinish(st,0,ctx);
+      return on.lmPlay(st,bi);
+    }
+    const plan=lmPlan(P.hand,cur,oppIn,st.chain.length);
+    if(!plan.seq.length)return on.lmFinish(st,0,ctx);
+    const step=plan.seq[0];
+    on.lmPlay(st,step.i);
+    if(st.pending!=null)on.lmOut(st,step.out);
+  },
+};
+
+// =====================================================================
+// Shell: lobby, local + online storage, bot and hotseat turns.
+// Local games (vs bot, hotseat) live in this browser. Online games need the
+// Claude artifact runtime (window.claude) and are shared through its db.
+// =====================================================================
+const HUB='https://dyrota.github.io/prototypes/';
+const $app=document.getElementById('app');
+const LS='proto-'+GAME.key+'-games';
+let DB=null,USER=null,ME=null,ONLINE=false,CANWRITE=true;
+let LOCAL={},REMOTE={},names={};
+let view={screen:'lobby',id:null},work=null,workKey=null,confirmDel=null,handoff=null,botTimer=null;
+
+function lsLoad(){try{return JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){return {}}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify(LOCAL))}catch(e){}}
+const getGame=id=>LOCAL[id]||REMOTE[id];
+const isLocal=g=>g.mode==='local';
+const vsBot=g=>isLocal(g)&&g.seats.includes('bot');
+
+function seatLabel(g,i){
+  const s=g.seats[i];
+  if(isLocal(g))return s==='bot'?'Bot':vsBot(g)?'You':`Seat ${i+1}`;
+  if(!s)return 'Open seat';
+  if(s===ME)return g.seats[0]===g.seats[1]?`You (seat ${i+1})`:'You';
+  return clean(names[s]||'Opponent');
+}
+function canActIn(g,st){
+  if(st.over||g.status==='done')return false;
+  const s=g.seats[st.turn];
+  return isLocal(g)?s==='h':CANWRITE&&s===ME;
+}
+function gameCtx(g){const st=work||g.state;return {canAct:canActIn(g,st),label:i=>seatLabel(g,i)}}
+function statusFor(g){
+  const st=g.state;
+  if(st.over||g.status==='done')return {cls:'done',txt:'Finished'};
+  if(g.seats[st.turn]==='bot')return {cls:'wait',txt:'Bot is playing'};
+  if(canActIn(g,st))return {cls:'go',txt:isLocal(g)&&!vsBot(g)?`Seat ${st.turn+1} to play`:'Your turn'};
+  if(!g.seats[1]&&st.turn===1)return {cls:'wait',txt:'Waiting for an opponent'};
+  return {cls:'wait',txt:`${seatLabel(g,st.turn)} to play`};
+}
+function modeName(g){return isLocal(g)?(vsBot(g)?'vs bot':'hotseat'):'online'}
+
+function render(){
+  if(view.screen==='game'&&getGame(view.id))renderGame();
+  else{view={screen:'lobby',id:null};renderLobby()}
+}
+
+function gameItem(id,g,join){
+  const s=statusFor(g),st=g.state;
+  return `<div class="gitem"><span class="dot"></span>
+    <div><b>${seatLabel(g,0)} ${GAME.score(st,0)} – ${GAME.score(st,1)} ${seatLabel(g,1)}</b> <span class="muted">· ${modeName(g)} · round ${st.round}</span></div>
+    <div class="row">${join?(CANWRITE?`<button class="btn small primary" data-a="join" data-i="${id}">Join</button>`:''):`<span class="pill ${s.cls}">${s.txt}</span>`}
+      <button class="btn small" data-a="open" data-i="${id}">${join?'Watch':'Open'}</button>
+      ${!join&&(isLocal(g)||g.createdBy===ME)?`<button class="btn small ghost" data-a="del" data-i="${id}">${confirmDel===id?'Confirm delete':'Delete'}</button>`:''}</div></div>`;
+}
+
+function renderLobby(){
+  const mine=[],open=[];
+  for(const [id,g] of Object.entries(LOCAL))mine.push([id,g]);
+  for(const [id,g] of Object.entries(REMOTE)){
+    if(g.seats.includes(ME))mine.push([id,g]);
+    else if(!g.seats[1]&&g.status!=='done')open.push([id,g]);
+  }
+  const rank=g=>statusFor(g).cls==='go'?0:statusFor(g).cls==='wait'?1:2;
+  mine.sort((a,b)=>rank(a[1])-rank(b[1])||(b[1].updatedAt||0)-(a[1].updatedAt||0));
+  $app.innerHTML=`
+  <header class="intro">
+    <a class="back" href="${HUB}" target="_top">← All prototypes</a>
+    <h1>${GAME.title}</h1>
+    <p class="hook">${GAME.hook}</p>
+  </header>
+  <section class="panel"><h2>Play</h2>
+    <div class="row">
+      <button class="btn primary" data-a="new" data-i="bot">Play vs bot</button>
+      <button class="btn" data-a="new" data-i="hot">Hotseat: 2 players, 1 device</button>
+      ${ONLINE&&CANWRITE?`<button class="btn" data-a="new" data-i="online">New online game</button><button class="btn" data-a="new" data-i="solo">Online, both seats</button>`:''}
+    </div>
+    <p class="mode">${ONLINE
+      ?'<b>Online games are shared through this page.</b> Anyone it’s shared with at Contributor access can join an open seat and play their turns whenever they like.'
+      :'Bot and hotseat games are saved in this browser. For async online play, open the Claude artifact version of this game.'}</p>
+  </section>
+  <div class="two">
+    <section class="panel"><h3>A turn</h3><ol>${GAME.turn.map(t=>`<li>${t}</li>`).join('')}</ol></section>
+    <section class="panel"><h3>Test for</h3><p class="watch">${GAME.watch}</p></section>
+  </div>
+  <section class="panel"><h2>Your games</h2>${mine.length?`<div class="glist">${mine.map(([id,g])=>gameItem(id,g,false)).join('')}</div>`:'<p class="muted">No games yet. Start one above.</p>'}</section>
+  ${ONLINE?`<section class="panel"><h2>Open seats</h2>${open.length?`<div class="glist">${open.map(([id,g])=>gameItem(id,g,true)).join('')}</div>`:'<p class="muted">No one is waiting for an opponent right now.</p>'}</section>`:''}
+  <section class="panel"><h2>Rules</h2><ul class="rules">${GAME.rules.map(r=>`<li>${r}</li>`).join('')}</ul></section>`;
+}
+
+function renderGame(){
+  const g=getGame(view.id),key=view.id+':'+(g.v||0);
+  if(workKey!==key){work=clone(g.state);workKey=key}
+  const st=work,ctx=gameCtx(g),s=statusFor(g),iAmIn=!isLocal(g)&&g.seats.includes(ME);
+  let banner;
+  if(st.over){const a=GAME.score(st,0),b=GAME.score(st,1);banner=a===b?`Tied at ${a} ★.`:`${ctx.label(a>b?0:1)} won, ${Math.max(a,b)} to ${Math.min(a,b)}.`}
+  else if(g.seats[st.turn]==='bot')banner='The bot is taking its turn…';
+  else if(ctx.canAct)banner=isLocal(g)&&!vsBot(g)?`Seat ${st.turn+1}, your turn.`:'Your turn.';
+  else if(!isLocal(g)&&!g.seats[1])banner=iAmIn?'Waiting for someone to join. They’ll take seat 2.':'Seat 2 is open.';
+  else banner=`${ctx.label(st.turn)} to play.`;
+  const showHandoff=handoff===view.id&&!st.over;
+  $app.innerHTML=`
+  <section class="panel gbar">
+    <div class="spread"><button class="btn ghost small" data-a="lobby">← ${GAME.title} games</button><span class="muted">${modeName(g)} · round ${st.round}</span></div>
+    <div class="seats">${[0,1].map(i=>`<div class="seat ${st.turn===i&&!st.over?'on':''}"><span>${ctx.label(i)}${st.turn===i&&!st.over?' <span class="muted">· to play</span>':''}</span><span class="score">${GAME.score(st,i)} ★</span></div>`).join('')}</div>
+    <div class="spread"><p class="status">${banner}</p><div class="row">
+      ${!isLocal(g)&&!g.seats[1]&&CANWRITE?(iAmIn?`<button class="btn small" data-a="solo" data-i="${view.id}">Take seat 2 myself</button>`:`<button class="btn small primary" data-a="join" data-i="${view.id}">Join as seat 2</button>`):''}
+      ${ctx.canAct&&!showHandoff?`<button class="btn small ghost" data-a="undo">Restart this turn</button>`:''}
+      ${st.over?`<button class="btn small primary" data-a="rematch">Rematch</button>`:''}</div></div>
+    <details class="rules"><summary>Rules</summary><ul>${GAME.rules.map(r=>`<li>${r}</li>`).join('')}</ul></details>
+  </section>
+  ${showHandoff
+    ?`<section class="panel handoff"><h2>Seat ${st.turn+1}’s turn</h2><p>Pass the device to seat ${st.turn+1}, then tap Ready.</p><div class="row"><button class="btn primary" data-a="ready">Ready</button></div></section>`
+    :`<div class="board">${GAME.view(st,ctx)}</div>`}
+  <section class="panel"><h3>Log</h3><div class="log">${st.log.slice(-14).reverse().map(l=>`<div>${esc(l)}</div>`).join('')||'<span>Nothing yet.</span>'}</div></section>`;
+  if(vsBot(g)&&g.seats[st.turn]==='bot'&&!st.over&&!botTimer)botTimer=setTimeout(runBot,700);
+}
+
+function runBot(){
+  botTimer=null;
+  const id=view.id,g=getGame(id);
+  if(!g||!vsBot(g)||g.state.over||g.seats[g.state.turn]!=='bot')return;
+  const w=clone(g.state),ctx={canAct:true,label:i=>seatLabel(g,i)};
+  for(let n=0;n<300;n++){if(GAME.bot(w,ctx)==='commit')break}
+  const doc=clone(g);doc.state=w;if(w.over)doc.status='done';
+  saveGame(id,doc);
+}
+
+async function saveGame(id,doc){
+  doc.updatedAt=Date.now();doc.v=(doc.v||0)+1;
+  if(doc.state.log.length>40)doc.state.log=doc.state.log.slice(-40);
+  if(isLocal(doc)){LOCAL[id]=doc;lsSave();render();return}
+  const prev=REMOTE[id];REMOTE[id]=doc;render();
+  try{await DB.doc('games/'+id).set(doc)}
+  catch(e){
+    if(prev)REMOTE[id]=prev;else delete REMOTE[id];workKey=null;render();
+    toast(e&&e.code==='invalid_argument'?'You can’t save here. Ask the owner for Contributor access.'
+      :e&&e.code==='quota_exceeded'?'This page is full. Delete some old games.'
+      :'Couldn’t save. Check your connection and try again.');
+  }
+}
+function newGame(kind){
+  const id=newId(),base={type:GAME.key,createdAt:Date.now(),state:GAME.setup()};
+  let doc;
+  if(kind==='bot')doc={...base,mode:'local',seats:['h','bot'],status:'active'};
+  else if(kind==='hot')doc={...base,mode:'local',seats:['h','h'],status:'active'};
+  else doc={...base,mode:'online',seats:[ME,kind==='solo'?ME:null],createdBy:ME,status:kind==='solo'?'active':'open'};
+  view={screen:'game',id};workKey=null;handoff=null;setHash(id);saveGame(id,doc);window.scrollTo(0,0);
+}
+async function claimSeat(id,asSolo){
+  if(!ONLINE)return;
+  const ref=DB.doc('games/'+id);
+  try{
+    const l=await ref.acquire({holder:ME,ttlMs:5000});
+    if(!l.acquired)return toast('Someone else is joining right now. Try again in a few seconds.');
+    const snap=await ref.get(),d=snap.exists?clone(snap.data()):null;
+    if(!d||d.seats[1])return toast('That seat was just taken.');
+    if(!asSolo&&d.seats[0]===ME)return;
+    d.seats=[d.seats[0],ME];d.status='active';
+    view={screen:'game',id};setHash(id);await saveGame(id,d);
+  }catch(e){toast('Couldn’t join that game. Try again.')}
+}
+function setHash(id){try{history.replaceState(null,'',id?'#'+id:location.pathname+location.search)}catch(e){}}
+
+const GLOBAL={
+  new:kind=>newGame(kind),
+  open:id=>{view={screen:'game',id};workKey=null;handoff=null;setHash(id);render();window.scrollTo(0,0)},
+  lobby:()=>{view={screen:'lobby',id:null};handoff=null;setHash(null);render()},
+  join:id=>claimSeat(id,false),
+  solo:id=>claimSeat(id,true),
+  undo:()=>{workKey=null;render()},
+  ready:()=>{handoff=null;render()},
+  rematch:()=>{const g=getGame(view.id);newGame(isLocal(g)?(vsBot(g)?'bot':'hot'):g.seats[0]===g.seats[1]?'solo':'online')},
+  del:async id=>{
+    if(confirmDel!==id){confirmDel=id;render();setTimeout(()=>{if(confirmDel===id){confirmDel=null;render()}},4000);return}
+    confirmDel=null;
+    if(LOCAL[id]){delete LOCAL[id];lsSave();render();return}
+    const prev=REMOTE[id];delete REMOTE[id];render();
+    try{await DB.doc('games/'+id).delete()}catch(e){REMOTE[id]=prev;render();toast('Couldn’t delete that game.')}
+  },
+};
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
+  const a=b.dataset.a,arg=b.dataset.i;
+  if(GLOBAL[a])return GLOBAL[a](arg);
+  const g=getGame(view.id);if(!g)return;
+  const ctx=gameCtx(g),h=GAME.on[a];
+  if(!h||!ctx.canAct)return;
+  if(h(work,arg,ctx)==='commit'){
+    const doc=clone(g);doc.state=clone(work);if(work.over)doc.status='done';
+    if(isLocal(doc)&&!vsBot(doc)&&!work.over)handoff=view.id;
+    await saveGame(view.id,doc);window.scrollTo(0,0);
+  }else render();
+});
+
+async function refreshNames(){
+  if(!USER)return;
+  const ids=new Set();
+  Object.values(REMOTE).forEach(g=>g.seats.forEach(s=>{if(s&&s!==ME&&!(s in names))ids.add(s)}));
+  if(!ids.size)return;
+  ids.forEach(id=>names[id]='');
+  try{const ps=await USER.profiles([...ids]);for(const id of ids)names[id]=(ps&&ps[id]&&ps[id].name)||'';render()}catch(e){}
+}
+async function init(){
+  LOCAL=lsLoad();
+  const h=(location.hash||'').slice(1);
+  if(h&&LOCAL[h])view={screen:'game',id:h};
+  render();
+  const cl=window.claude;if(!cl||!cl.use)return;
+  const [db,user]=await Promise.all([cl.use('db'),cl.use('user')]);
+  if(!db||!user)return;
+  const id=await user.id();if(!id)return;
+  DB=db;USER=user;ME=id;ONLINE=true;
+  try{if(await user.can('data.write')===false)CANWRITE=false}catch(e){}
+  render();
+  let first=true;
+  db.collection('games').onSnapshot(snap=>{
+    const next={};
+    snap.docs.forEach(d=>{const v=d.data();if(v&&v.state&&v.type===GAME.key)next[d.id]=v});
+    REMOTE=next;
+    if(first){first=false;if(h&&REMOTE[h]&&view.screen==='lobby')view={screen:'game',id:h}}
+    refreshNames();render();
+  },()=>toast('Lost the connection to shared games. Reload to reconnect.'));
+}
+init();
+
+</script>
+
+</body></html>
