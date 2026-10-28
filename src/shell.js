@@ -111,7 +111,7 @@ function renderGame(){
   const plate=(i,cls)=>{const name=ctx.label(i);
     return `<div class="plate ${cls}${st.turn===i&&!st.over?' active':''}" data-seat="${i}"><span class="avatar">${initial(name)}</span>
       <div class="pl-body"><div class="pl-name">${name}</div><div class="pl-info">${i===S?v.meInfo:v.oppInfo}</div></div>
-      <div class="pl-score"><b>${GAME.score(st,i)}</b><span>★</span></div></div>`};
+      <div class="pl-score"><b>${GAME.score(st,i)}</b><span>pts</span></div></div>`};
   const covered=handoff===view.id&&!st.over;
   const joinBtn=!isLocal(g)&&!g.seats[1]&&CANWRITE?(g.seats[0]===ME?`<button class="btn small" data-a="solo" data-i="${view.id}">Take seat 2 myself</button>`:`<button class="btn primary" data-a="join" data-i="${view.id}">Join as seat 2</button>`):'';
   $app.innerHTML=`<div class="stage">
@@ -146,7 +146,7 @@ function modalHTML(){
     else title=(a>b?0:1)===S?'Victory':'Defeat';
     return `<div class="overlay"><div class="modal center end">
       <div class="end-title">${title}</div>
-      <div class="end-scores">${[0,1].map(i=>`<div><span>${seatLabel(g,i)}</span><b>${GAME.score(work,i)} ★</b></div>`).join('')}</div>
+      <div class="end-scores">${[0,1].map(i=>`<div><span>${seatLabel(g,i)}</span><b>${GAME.score(work,i)} pts</b></div>`).join('')}</div>
       <div class="row center"><button class="btn primary big" data-a="rematch">Rematch</button><button class="btn" data-a="menu">Menu</button><button class="btn ghost" data-a="dismiss">See the board</button></div></div></div>`;
   }
   if(modal==='rules'){

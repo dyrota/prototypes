@@ -2,18 +2,18 @@
 // FAIR FOLK: your opponent splits your hand into two piles; you keep one.
 // =====================================================================
 const FFC={
-  penny:{n:'Penny',g:1,kind:'a',art:'◉'+T,txt:'+1 Glamour.'},
-  svow:{n:'Small Vow',vp:1,kind:'c',art:'♢'+T,txt:'1 ★. Does nothing in hand.'},
-  bell:{n:'Silver Bell',cost:3,g:2,kind:'a',art:'♫'+T,txt:'+2 Glamour.'},
-  twin:{n:'Twin Lantern',cost:2,g:1,kind:'b',art:'⚭'+T,txt:'+1. +2 more if another Twin Lantern is in the same pile.'},
-  hermit:{n:'Hermit',cost:3,g:1,kind:'b',art:'☗'+T,txt:'+1, or +4 if it is alone in its pile.'},
-  hoard:{n:'Hoard',cost:4,g:1,kind:'b',art:'❖'+T,txt:'+1 for each card in its pile, itself included.'},
-  change:{n:'Changeling',cost:4,g:2,kind:'b',art:'◐'+T,txt:'+2. If spurned, it moves into the kept pile.'},
-  grudge:{n:'Grudge',cost:3,g:1,kind:'d',art:'✠'+T,txt:'+1. If spurned, the divider gets no tithe.'},
-  mirror:{n:'Mirror',cost:5,g:0,kind:'b',art:'◈'+T,txt:'+Glamour equal to the best printed value in the other pile.'},
-  witness:{n:'Witness',cost:4,g:1,kind:'d',art:'⊙'+T,txt:'+1. Next turn you split your own hand.'},
-  vow:{n:'Vow',cost:5,vp:3,kind:'c',art:'♦'+T,txt:'3 ★. Does nothing in hand.'},
-  gvow:{n:'Grand Vow',cost:8,vp:6,kind:'c',art:'♛'+T,txt:'6 ★. Does nothing in hand.'},
+  penny:{n:'Penny',g:1,kind:'a',art:'◉'+T,txt:'+1 coin.'},
+  svow:{n:'Small Gem',vp:1,kind:'c',art:'♢'+T,txt:'Worth 1 point. No coins.'},
+  bell:{n:'Silver Bell',cost:3,g:2,kind:'a',art:'♫'+T,txt:'+2 coins.'},
+  twin:{n:'Twin Lantern',cost:2,g:1,kind:'b',art:'⚭'+T,txt:'+1 coin, or +3 if another Twin Lantern is in the same pile.'},
+  hermit:{n:'Hermit',cost:3,g:1,kind:'b',art:'☗'+T,txt:'+1 coin, or +4 if it is alone in its pile.'},
+  hoard:{n:'Hoard',cost:4,g:1,kind:'b',art:'❖'+T,txt:'+1 coin for each card in its pile, itself included.'},
+  change:{n:'Changeling',cost:4,g:2,kind:'b',art:'◐'+T,txt:'+2 coins. If it’s in the pile you didn’t pick, it jumps into the one you did.'},
+  grudge:{n:'Grudge',cost:3,g:1,kind:'d',art:'✠'+T,txt:'+1 coin. If it’s in the pile you didn’t pick, the splitter gets no bonus.'},
+  mirror:{n:'Mirror',cost:5,g:0,kind:'b',art:'◈'+T,txt:'Coins equal to the best single card in the other pile.'},
+  witness:{n:'Witness',cost:4,g:1,kind:'d',art:'⊙'+T,txt:'+1 coin. Next turn you split your own hand.'},
+  vow:{n:'Gem',cost:5,vp:3,kind:'c',art:'♦'+T,txt:'Worth 3 points. No coins.'},
+  gvow:{n:'Crown',cost:8,vp:6,kind:'c',art:'♛'+T,txt:'Worth 6 points. No coins.'},
 };
 const FF_SUPPLY={twin:8,bell:8,hermit:6,grudge:6,hoard:6,change:6,witness:6,mirror:6,vow:8,gvow:4};
 const defSplit=n=>Array.from({length:n},(_,i)=>i<Math.ceil(n/2)?0:1);
@@ -51,10 +51,10 @@ function ffPilesHTML(hand,assign,o){
   return `<div class="piles">${[0,1].map(k=>{
     const r=ffResolve(hand,assign,k),idx=hand.map((_,i)=>i).filter(i=>assign[i]===k);
     return `<div class="pile p${'AB'[k]}">
-      <div class="pile-h"><span class="pile-name">Pile ${'AB'[k]}</span>${idx.length?`<span class="chip gold">+${r.g} Glamour</span><span class="chip">tithe ${r.tithe}</span>`:''}</div>
+      <div class="pile-h"><span class="pile-name">Pile ${'AB'[k]}</span>${idx.length?`<span class="chip gold">+${r.g} coins</span><span class="chip" title="Bonus coins the splitter gets if this pile is picked">splitter +${r.tithe}</span>`:''}</div>
       <div class="pile-cards">${idx.map((i,j)=>cardHTML(FFC[hand[i]],{btn:o.edit,cls:`sm${FX.deal?' deal':''}${o.edit?' movable':''}`,style:`--i:${j+k*3}`,
         attrs:o.edit?`data-a="ffToggle" data-i="${i}" aria-label="Move ${FFC[hand[i]].n} to pile ${'BA'[k]}"`:''})).join('')||'<p class="empty">Tap cards to move them here</p>'}</div>
-      ${o.keep&&idx.length?`<button class="btn primary" data-a="ffKeep" data-i="${k}">Keep pile ${'AB'[k]}</button>`:''}
+      ${o.keep&&idx.length?`<button class="btn primary" data-a="ffKeep" data-i="${k}">Play pile ${'AB'[k]}</button>`:''}
     </div>`;
   }).join('')}</div>`;
 }
@@ -69,7 +69,7 @@ function ffAllSplits(n){
   }
   return out;
 }
-// Bot: as divider, minimise what the chooser gets, minus the tithe it earns.
+// Bot: as splitter, minimise what the chooser gets, minus the bonus it earns.
 function ffDenySplit(hand){
   let best=null,bs=Infinity;
   for(const a of ffAllSplits(hand.length)){
@@ -97,17 +97,18 @@ function ffBotBuy(st){
 
 const GAME={
   key:'fair-folk',title:'Fair Folk',
-  hook:'Your opponent splits every hand you draw. You choose which half to play.',
-  turn:['Pick one of the two piles your opponent made from your hand, and play it.','Buy cards with Glamour.','Draw your opponent’s next hand and split it for them.'],
-  watch:'Does splitting feel like a puzzle or a chore? Which cards does the divider dread? Does anyone ever get to run a combo?',
+  hook:'A classic deckbuilder with one twist: your opponent splits every hand you draw into two piles, and you only get to play one.',
+  turn:['Pick one of the two piles your opponent made from your hand. You earn that pile’s coins.','Spend the coins on new cards for your deck.','Draw your opponent’s next hand and split it for them.'],
+  watch:'Does splitting feel like a puzzle or a chore? Which cards does the splitter dread? Does anyone ever get to run a combo?',
   rules:[
-    'Each player starts with 7 Pennies and 3 Small Vows. Hands are 5 cards.',
-    'The divider splits your hand into two piles of at least one card. You keep one pile and play it. The other pile is spurned: it does nothing except trigger "if spurned" text.',
-    'The divider earns a tithe of 1 Glamour per spurned card, banked for their next turn. Lopsided splits cost them.',
-    'Buy as many cards as you can afford. Bought cards go to your discard pile.',
-    'Vows score at the end and do nothing in hand, so they make your hands easier to split against you.',
-    'The game ends after the round in which the Grand Vows or any three piles run out, or after round 15. Most ★ wins.',
-    'Seat 1’s opening hand is split at random.',
+    'Each player has their own deck, starting with 7 Pennies (+1 coin) and 3 Small Gems (1 point). Each turn you draw 5 cards.',
+    'Your opponent splits those 5 cards into two piles. You pick one pile and earn its coins. The other pile earns nothing. Both piles then go to your discard pile.',
+    'Spend your coins on cards from the shop. Bought cards go to your discard pile.',
+    'When your deck runs out, your discard pile is shuffled into a new deck. That is how cards you bought come back into your hand.',
+    'The splitter earns 1 bonus coin for each card in the pile you didn’t pick, added to their next turn. So lopsided splits cost them.',
+    'Gems and Crowns are worth points at the end but give no coins. The more you buy, the easier your hands are to split against you.',
+    'The game ends after the round in which the Crowns or any three shop piles run out, or after round 15. Most points wins.',
+    'Seat 1’s first hand is split at random.',
   ],
   maxRounds:15,
   score:ffVP,
@@ -119,25 +120,25 @@ const GAME={
   },
   view(st,ctx){
     const S=ctx.seat,A=st.turn,L=ctx.label,act=ctx.canAct,P=st.players;
-    const info=i=>`${P[i].deck.length+P[i].discard.length} cards · <span class="gold">${P[i].bank} banked</span>`;
+    const info=i=>`${P[i].deck.length+P[i].discard.length} cards · <span class="gold">${P[i].bank} bonus coins saved</span>`;
     const v={oppInfo:info(1-S),meInfo:info(S),arena:'',hand:'',actions:'',prompt:''};
     v.hand=`<div class="stacks">${stackHTML('Deck',P[S].deck.length)}${stackHTML('Discard',P[S].discard.length)}</div>`;
     if(st.over)return v;
     if(st.phase==='choose'){
-      v.prompt=act?`${L(1-A)} split your hand. Keep one pile.`:`${L(A)} is choosing a pile.`;
+      v.prompt=act?`${L(1-A)} split your hand into two piles. Pick one to play.`:`${L(A)} is choosing a pile.`;
       v.arena=ffPilesHTML(st.offer.hand,st.offer.assign,{keep:act});
-      if(act&&P[A].bank)v.actions=`<span class="chip gold">+${P[A].bank} banked tithe</span>`;
+      if(act&&P[A].bank)v.actions=`<span class="chip gold">+${P[A].bank} bonus coins from splitting</span>`;
     }else if(st.phase==='ownsplit'){
       v.prompt=act?'Your Witness lets you split your own hand.':`${L(A)} is splitting their own hand.`;
       v.arena=ffPilesHTML(st.offer.hand,st.offer.assign,{edit:act});
       if(act)v.actions=`<button class="btn primary big" data-a="ffLock">Lock in split</button>`;
     }else if(st.phase==='buy'){
-      v.prompt=act?'Spend your Glamour.':`${L(A)} is shopping.`;
-      v.arena=`<div class="purse"><span class="purse-n">${st.glamour}</span><span class="purse-l">Glamour</span>${st.bought.length?`<span class="muted">Bought ${st.bought.map(k=>FFC[k].n).join(', ')}</span>`:''}</div>${shopHTML(FFC,st.supply,st.glamour,act,'ffBuy')}`;
+      v.prompt=act?'Buy cards. They go to your discard pile and get shuffled into your deck later.':`${L(A)} is shopping.`;
+      v.arena=`<div class="purse"><span class="purse-n">${st.glamour}</span><span class="purse-l">coins</span>${st.bought.length?`<span class="muted">Bought ${st.bought.map(k=>FFC[k].n).join(', ')}</span>`:''}</div>${shopHTML(FFC,st.supply,st.glamour,act,'ffBuy')}`;
       if(act)v.actions=`<button class="btn primary big" data-a="ffDoneBuy">Done buying</button>`;
     }else if(st.phase==='split'){
       const Tg=1-A,self=P[Tg].selfSplit;
-      v.prompt=act?(self?`${L(Tg)} played a Witness and will split this hand.`:`Split ${L(Tg)}’s next hand. They keep one pile; you bank the other as tithe.`)
+      v.prompt=act?(self?`${L(Tg)} played a Witness and will split this hand.`:`Split ${L(Tg)}’s next hand. They pick a pile; you get 1 bonus coin per card in the other one.`)
         :`${L(A)} is splitting ${Tg===S&&!ctx.hot?'your':L(Tg)+'’s'} next hand.`;
       v.arena=ffPilesHTML(st.splitHand,st.splitAssign,{edit:act&&!self});
       if(act)v.actions=`<button class="btn primary big" data-a="ffSend">${self?'End turn':'Offer split'}</button>`;
@@ -152,14 +153,14 @@ const GAME={
       const r=ffResolve(st.offer.hand,st.offer.assign,k),bank=P.bank;
       st.glamour=r.g+bank;P.bank=0;O.bank+=r.tithe;P.discard.push(...st.offer.hand);
       if(r.witness)P.selfSplit=true;
-      st.log.push(`${ctx.label(me)} kept pile ${'AB'[k]} (${r.kept.map(c=>FFC[c].n).join(', ')}) for ${r.g} Glamour${bank?` + ${bank} banked`:''}. ${ctx.label(1-me)} banks ${r.tithe} tithe.`);
-      pop(me,`+${st.glamour} Glamour`);if(r.tithe)pop(1-me,`+${r.tithe} tithe`,'good');sfx('coin');
+      st.log.push(`${ctx.label(me)} kept pile ${'AB'[k]} (${r.kept.map(c=>FFC[c].n).join(', ')}) for ${r.g} coins${bank?` + ${bank} bonus`:''}. ${ctx.label(1-me)} gets ${r.tithe} bonus coin${r.tithe===1?'':'s'}.`);
+      pop(me,`+${st.glamour} coins`);if(r.tithe)pop(1-me,`+${r.tithe} bonus`,'good');sfx('coin');
       st.offer=null;st.phase='buy';
     },
     ffBuy(st,key){
       const c=FFC[key];if(st.glamour<c.cost||!st.supply[key])return;
       st.glamour-=c.cost;st.supply[key]--;st.players[st.turn].discard.push(key);st.bought.push(key);
-      if(c.vp){pop(st.turn,`+${c.vp} ★`);sfx('score')}else sfx('card');
+      if(c.vp){pop(st.turn,`+${c.vp} points`);sfx('score')}else sfx('card');
       if(st.supply.gvow===0||emptyPiles(st.supply)>=3)st.endTriggered=true;
     },
     ffDoneBuy(st,_,ctx){
