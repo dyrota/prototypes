@@ -63,6 +63,10 @@ button{font:inherit;color:inherit;cursor:pointer}
 .menu{display:flex;flex-direction:column;gap:12px;width:min(340px,100%)}
 .menu .btn{width:100%}
 .menu-row{display:flex;gap:10px}.menu-row .btn{flex:1}
+.opt{display:flex;flex-direction:column;align-items:center;gap:6px}
+.seg{display:flex;gap:4px;padding:4px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+.seg .btn{border-radius:999px;border-color:transparent;background:none}
+.seg .btn.on{background:var(--accent);color:var(--accent-ink)}
 .notice{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-size:14px}
 .foot{font-size:13px;color:var(--muted);max-width:42ch}
 .deco{position:absolute;inset:0;pointer-events:none;display:grid;place-items:center}
@@ -522,6 +526,10 @@ let DB=null,USER=null,ME=null,ONLINE=false,CANWRITE=true;
 let LOCAL={},REMOTE={},names={};
 let view={screen:'title',id:null},work=null,workKey=null,modal=null,confirmDel=null,handoff=null,botTimer=null,dismissed=null;
 try{MUTED=localStorage.getItem('proto-muted')==='1'}catch(e){}
+// Rule variants a game offers on its title screen (GAME.options); new games start with the current picks.
+let OPTS={};
+for(const o of GAME.options||[])OPTS[o.key]=o.choices[0][0];
+try{Object.assign(OPTS,JSON.parse(localStorage.getItem(LS+'-opts')||'{}'))}catch(e){}
 
 function lsLoad(){try{return JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){return {}}}
 function lsSave(){try{localStorage.setItem(LS,JSON.stringify(LOCAL))}catch(e){}}
@@ -588,8 +596,9 @@ function renderTitle(){
     <div class="title-inner">
       <h1 class="logo">${GAME.title}</h1>
       <p class="tag">${GAME.hook}</p>
+      ${(GAME.options||[]).map(o=>`<div class="opt"><span class="sub">${o.label}</span><div class="seg" role="group" aria-label="${o.label}">${o.choices.map(([v,l])=>`<button class="btn small${OPTS[o.key]===v?' on':''}" aria-pressed="${OPTS[o.key]===v}" data-a="opt" data-i="${o.key}:${v}">${l}</button>`).join('')}</div></div>`).join('')}
       <nav class="menu">
-        ${cont?`<button class="btn primary big" data-a="open" data-i="${cont[0]}">Continue<small>${modeName(cont[1])} · round ${cont[1].state.round} · ${GAME.score(cont[1].state,0)}–${GAME.score(cont[1].state,1)}</small></button>`:''}
+        ${cont?`<button class="btn primary big" data-a="open" data-i="${cont[0]}">Continue<small>${modeName(cont[1])}${GAME.tag?' · '+GAME.tag(cont[1].state):''} · round ${cont[1].state.round} · ${GAME.score(cont[1].state,0)}–${GAME.score(cont[1].state,1)}</small></button>`:''}
         <button class="btn ${cont?'':'primary '}big" data-a="new" data-i="bot">Play vs bot</button>
         <button class="btn big" data-a="new" data-i="hot">Pass and play</button>
         ${ONLINE&&CANWRITE?`<button class="btn big" data-a="new" data-i="online">New online game</button>`:''}
@@ -624,7 +633,7 @@ function renderGame(){
     <header class="hud">
       <button class="icon" data-a="menu" aria-label="Back to menu">${ICON.menu}</button>
       ${plate(1-S,'opp')}
-      <div class="hud-r"><span class="round">Round ${st.round}/${GAME.maxRounds}</span>
+      <div class="hud-r"><span class="round">${GAME.tag?GAME.tag(st)+' · ':''}Round ${st.round}/${GAME.maxRounds}</span>
         <button class="icon" data-a="modal" data-i="rules" aria-label="How to play">${ICON.help}</button>
         <button class="icon" data-a="mute" aria-label="${MUTED?'Turn sound on':'Turn sound off'}">${MUTED?ICON.off:ICON.on}</button></div>
     </header>
@@ -722,8 +731,9 @@ async function saveGame(id,doc){
       :'Couldn’t save. Check your connection and try again.');
   }
 }
-function newGame(kind){
-  const id=newId(),base={type:GAME.key,createdAt:Date.now(),state:GAME.setup()};
+function newGame(kind,opts){
+  opts={...(opts||OPTS)};
+  const id=newId(),base={type:GAME.key,createdAt:Date.now(),opts,state:GAME.setup(opts)};
   let doc;
   if(kind==='bot')doc={...base,mode:'local',seats:['h','bot'],status:'active'};
   else if(kind==='hot')doc={...base,mode:'local',seats:['h','h'],status:'active'};
@@ -758,7 +768,8 @@ const GLOBAL={
   ready:()=>{handoff=null;FX.deal=true;render()},
   dismiss:()=>{dismissed=view.id;render()},
   mute:()=>{MUTED=!MUTED;try{localStorage.setItem('proto-muted',MUTED?'1':'0')}catch(e){}render();sfx('tap')},
-  rematch:()=>{const g=getGame(view.id);newGame(isLocal(g)?(vsBot(g)?'bot':'hot'):g.seats[0]===g.seats[1]?'solo':'online')},
+  rematch:()=>{const g=getGame(view.id);newGame(isLocal(g)?(vsBot(g)?'bot':'hot'):g.seats[0]===g.seats[1]?'solo':'online',g.opts)},
+  opt:w=>{const [k,v]=w.split(':');OPTS[k]=v;try{localStorage.setItem(LS+'-opts',JSON.stringify(OPTS))}catch(e){}render();sfx('tap')},
   del:async id=>{
     if(confirmDel!==id){confirmDel=id;render();return}
     confirmDel=null;

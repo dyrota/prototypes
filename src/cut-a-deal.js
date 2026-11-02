@@ -164,40 +164,46 @@ const GAME={
   rules:[
     'Each player has their own deck, starting with 8 Coppers (+1 coin) and 2 Militia (+1 might). Each turn you draw 5 cards.',
     'There is no shared market row. At the end of your turn you reveal 5 cards from the market deck and split them into two piles, each with at least one card.',
-    'Your opponent picks one pile to shop from on their turn. You get the other pile to shop from on your next turn. Cut it so you are happy with either half.',
+    'Your opponent picks one pile to shop from on their turn. What happens to the other pile depends on the rule picked on the title screen:',
+    '“Goes to the cutter”: you shop from the leftover pile on your next turn, so cut it so you are happy with either half.',
+    '“Goes to the bottom of the deck”: the leftover pile is lost, so cut it to leave your opponent as little as possible.',
     'On your turn, play cards one at a time. Coins buy cards; might defeats foes for points. You can shop from your two piles plus Apprentice, Soldier and Bandit, which are always available.',
     'Follow-up: some cards get a bonus if the card you played just before them is the same faction (Guild, Blade or Mystic). Play order matters.',
     'Banish removes a card from your deck for good. Bought cards go to your discard pile, which is shuffled into a new deck when your deck runs out.',
     'Cards you don’t buy go to the bottom of the market deck.',
     `The game ends after the round in which the ${CD_POOL}-point pool runs out, or after round 20. Points from foes plus points printed on your cards; most wins.`,
   ],
+  options:[{key:'leftover',label:'Leftover pile',choices:[['cutter','Goes to the cutter'],['bottom','Goes to the bottom of the deck']]}],
+  tag:st=>st.leftover==='bottom'?'Leftovers to bottom':'Leftovers to cutter',
   maxRounds:20,
   score:cdScore,
-  setup(){
+  setup(o){
+    const leftover=o&&o.leftover==='bottom'?'bottom':'cutter';
     const market=shuffle(Object.entries(CD_MARKET).flatMap(([k,n])=>rep(k,n)));
     const players=[0,1].map(()=>{const p={deck:shuffle([...rep('copper',8),...rep('militia',2)]),discard:[],hand:[],pts:0,reserve:[]};p.hand=draw(p,5);return p});
     const cards=market.splice(market.length-CD_CUT,CD_CUT),assign=shuffle([0,0,1,1,1]);
-    return {turn:0,round:1,players,market,pool:CD_POOL,offer:{cards,assign},phase:'choose',
+    return {turn:0,round:1,leftover,players,market,pool:CD_POOL,offer:{cards,assign},phase:'choose',
       coin:0,might:0,cnt:{},lastF:null,topNext:false,pending:null,mine:[],played:[],cut:null,
-      log:['The opening cut was made at random. Seat 2 gets the pile seat 1 leaves.'],over:false,endTriggered:false};
+      log:[leftover==='bottom'?'The opening cut was made at random.':'The opening cut was made at random. Seat 2 gets the pile seat 1 leaves.'],over:false,endTriggered:false};
   },
   view(st,ctx){
     const S=ctx.seat,A=st.turn,L=ctx.label,act=ctx.canAct,P=st.players,me=P[S],ap=P[A];
     const total=p=>p.deck.length+p.discard.length+p.hand.length;
-    const v={oppInfo:`${total(P[1-S])} cards · share ${P[1-S].reserve.length}`,meInfo:`${total(me)} cards · ${st.pool} pts left in pool`,arena:'',hand:'',actions:'',prompt:''};
+    const bottom=st.leftover==='bottom';
+    const v={oppInfo:`${total(P[1-S])} cards${bottom?'':` · share ${P[1-S].reserve.length}`}`,meInfo:`${total(me)} cards · ${st.pool} pts left in pool`,arena:'',hand:'',actions:'',prompt:''};
     if(st.over)return v;
     const peek=(label,hand)=>`<div class="peek-label">${label}</div>`+handHTML(hand.map(k=>({def:CDC[k],o:{cls:'peek'}})));
     const share=p=>p.reserve.length?rowHTML('Your share from your last cut',p.reserve.map((k,i)=>cardHTML(CDC[k],{cls:'sm',style:`--i:${i}`})).join('')):'';
     if(st.phase==='choose'){
       const o=st.offer;
-      v.prompt=act?`${L(1-A)} cut the market. Take a pile; they get the other.`:`${L(A)} is picking a pile.`;
+      v.prompt=act?`${L(1-A)} cut the market. Take a pile; ${bottom?'the other goes to the bottom of the deck':'they get the other'}.`:`${L(A)} is picking a pile.`;
       v.arena=cdPilesHTML(o.cards,o.assign,{pick:act})+(act?share(ap):'');
       v.hand=S===A?peek('Your hand',me.hand):peek('Your next hand',me.hand);
       return v;
     }
     if(st.phase==='cut'){
       const c=st.cut;
-      v.prompt=act?`Cut the market for ${L(1-A)}. They pick a pile; you shop from the other next turn.`:`${L(A)} is cutting the market.`;
+      v.prompt=act?`Cut the market for ${L(1-A)}. They pick a pile; ${bottom?'the other goes to the bottom of the deck':'you shop from the other next turn'}.`:`${L(A)} is cutting the market.`;
       v.arena=cdPilesHTML(c.cards,c.assign,{edit:act});
       if(act){
         const e=cdEstimate(me.hand),o=cdAvgHand(st,1-A);
@@ -238,8 +244,9 @@ const GAME={
     cdPick(st,k,ctx){
       k=+k;const me=st.turn,P=st.players[me],o=st.offer;
       const pile=o.cards.filter((_,i)=>o.assign[i]===k),rest=o.cards.filter((_,i)=>o.assign[i]!==k);
-      st.mine=pile.concat(P.reserve);P.reserve=[];st.players[1-me].reserve=rest;st.offer=null;st.phase='main';
-      st.log.push(`${ctx.label(me)} took pile ${'AB'[k]} (${pile.map(x=>CDC[x].n).join(', ')}). ${ctx.label(1-me)} gets ${rest.map(x=>CDC[x].n).join(', ')||'nothing'}.`);
+      st.mine=pile.concat(P.reserve);P.reserve=[];st.offer=null;st.phase='main';
+      if(st.leftover==='bottom')st.market.unshift(...rest);else st.players[1-me].reserve=rest;
+      st.log.push(`${ctx.label(me)} took pile ${'AB'[k]} (${pile.map(x=>CDC[x].n).join(', ')}). ${st.leftover==='bottom'?'The rest go to the bottom of the deck':`${ctx.label(1-me)} gets ${rest.map(x=>CDC[x].n).join(', ')||'nothing'}`}.`);
       FX.deal=true;sfx('card');
     },
     cdPlay(st,i){
@@ -313,7 +320,7 @@ const GAME={
         if(mask&1)continue;
         const a=c.cards.map((_,i)=>mask>>i&1),pile=k=>c.cards.filter((_,i)=>a[i]===k);
         const theirs=[0,1].map(k=>cdPlan(pile(k).concat(O.reserve),opp.c,opp.m,st).v),tk=theirs[1]>theirs[0]?1:0;
-        const s=cdPlan(pile(1-tk),mine.c,mine.m,st).v-.6*theirs[tk]+rnd(10)/100;
+        const s=(st.leftover==='bottom'?0:cdPlan(pile(1-tk),mine.c,mine.m,st).v)-.6*theirs[tk]+rnd(10)/100;
         if(s>bs){bs=s;best=a}
       }
       if(n<2)return on.cdSend(st);
