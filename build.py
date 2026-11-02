@@ -38,11 +38,21 @@ THEMES = {
   --card:#EEE4D1;--card-ink:#241A10;--card-muted:#62523F;--k1:#857C70;--k2:#A8452F;--k3:#3C7A8A;--k4:#5E554C;--k5:#C38A1E;
   --tex:radial-gradient(ellipse 60% 40% at 50% 105%,rgba(240,164,58,.22),transparent 70%),repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 46px),repeating-linear-gradient(90deg,rgba(0,0,0,.14) 0 1px,transparent 1px 92px);""",
     ),
+    "cut-a-deal": dict(
+        font="Rye",
+        css="""--display:"Rye",Georgia,serif;
+  --bg1:#1D4A33;--bg2:#06150D;--panel:rgba(240,230,200,.05);--panel2:rgba(240,230,200,.09);--line:rgba(226,176,74,.24);
+  --ink:#F3EEDF;--muted:#AFC0A9;--accent:#E2B04A;--accent-ink:#1E1606;--c:#4FBF86;--good:#8BE0A6;--bad:#EE8A7E;
+  --card:#F3ECDA;--card-ink:#1F1B12;--card-muted:#5B5440;--k1:#7C7F74;--k2:#B5831F;--k3:#3C6FB4;--k4:#B0433A;--k5:#4C3A63;
+  --pa:#8FC8F0;--pb:#F0B36A;
+  --tex:radial-gradient(ellipse 70% 50% at 50% 40%,rgba(120,220,160,.12),transparent 70%),repeating-radial-gradient(circle at 30% 30%,rgba(0,0,0,.06) 0 1px,transparent 1px 3px);""",
+    ),
 }
 
 GAMES = [
     ("fair-folk", "Fair Folk", "Async deckbuilder prototype: your opponent splits every hand you draw, and you choose which half to play."),
     ("loom", "Loom", "Async deckbuilder prototype: every card links two symbols, and you continue the thread your opponent left."),
+    ("cut-a-deal", "Cut a Deal", "Async deckbuilder prototype: no shared market row. Every card the market reveals is cut into two piles, and your opponent picks first."),
     ("relay", "Relay", "Async deckbuilder prototype: race the same gauntlet, and the cards you pass up go to your rival."),
 ]
 

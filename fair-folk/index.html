@@ -149,6 +149,17 @@ button.card:disabled{cursor:default}
 .pile-name{font-family:var(--display);font-size:22px;color:var(--pc)}
 .pile-cards{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;min-height:calc(var(--cws)*1.4)}
 
+/* Cut a Deal */
+.res{display:flex;gap:22px;align-items:baseline;flex-wrap:wrap;justify-content:center}
+.res .r{font-family:var(--display);font-size:20px}
+.res .r b{font-size:46px;line-height:1;margin-right:6px}
+.res .coin b{color:var(--accent)} .res .mi b{color:var(--bad)}
+.cd-sec{display:flex;flex-direction:column;gap:8px;align-items:center;width:100%;padding:12px;border-radius:18px;background:var(--panel);border:1px solid var(--line)}
+.cd-row{display:flex;gap:12px;width:100%;flex-wrap:wrap}
+.cd-row .mkt{flex:3 1 320px} .cd-row .always{flex:1 1 220px}
+.cd-sec.played{padding:8px 12px;background:none;border-style:dashed}
+.fac{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:calc(var(--cw)*.075);letter-spacing:.08em;text-transform:uppercase;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+
 /* Loom thread */
 .loom{width:100%;display:flex;flex-direction:column;gap:12px;align-items:center}
 .thread{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;row-gap:30px;padding:22px 14px 32px;border-radius:18px;background:var(--panel);border:1px solid var(--line);width:100%;min-height:110px}
