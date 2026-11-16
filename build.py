@@ -30,6 +30,15 @@ THEMES = {
   --thread:#D9564B;--sS:#E0A92E;--sM:#7F8CE8;--sL:#4FAE64;--sW:#3BA9CF;
   --tex:repeating-linear-gradient(0deg,rgba(233,220,195,.04) 0 2px,transparent 2px 7px),repeating-linear-gradient(90deg,rgba(233,220,195,.04) 0 2px,transparent 2px 7px);""",
     ),
+    "cut-a-deal-2": dict(
+        font="Rye",
+        css="""--display:"Rye",Georgia,serif;
+  --bg1:#5A1F24;--bg2:#160608;--panel:rgba(240,225,200,.05);--panel2:rgba(240,225,200,.09);--line:rgba(226,176,74,.26);
+  --ink:#F5EDE0;--muted:#C9AFA4;--accent:#E2B04A;--accent-ink:#1E1606;--c:#E06A5A;--good:#8BE0A6;--bad:#F29A8C;
+  --card:#F3ECDA;--card-ink:#1F1B12;--card-muted:#5B5440;--k1:#7C7F74;--k2:#B5831F;--k3:#3C6FB4;--k4:#B0433A;--k5:#4C3A63;
+  --pa:#8FC8F0;--pb:#F0B36A;
+  --tex:radial-gradient(ellipse 70% 50% at 50% 40%,rgba(240,140,120,.12),transparent 70%),repeating-radial-gradient(circle at 30% 30%,rgba(0,0,0,.06) 0 1px,transparent 1px 3px);""",
+    ),
     "relay": dict(
         font="Pirata+One",
         css="""--display:"Pirata One","Palatino Linotype",Palatino,serif;
@@ -53,6 +62,7 @@ GAMES = [
     ("fair-folk", "Fair Folk", "Async deckbuilder prototype: your opponent splits every hand you draw, and you choose which half to play."),
     ("loom", "Loom", "Async deckbuilder prototype: every card links two symbols, and you continue the thread your opponent left."),
     ("cut-a-deal", "Cut a Deal", "Async deckbuilder prototype: no shared market row. Every card the market reveals is cut into two piles, and your opponent picks first."),
+    ("cut-a-deal-2", "Cut a Deal II", "Async deckbuilder prototype: cut 3 cheap and 2 premium market cards into two piles. Your opponent shops first from the pile they take, and everything they leave comes back to you."),
     ("relay", "Relay", "Async deckbuilder prototype: race the same gauntlet, and the cards you pass up go to your rival."),
 ]
 
