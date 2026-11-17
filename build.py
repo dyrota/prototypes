@@ -47,12 +47,22 @@ THEMES = {
   --pa:#8FC8F0;--pb:#F0B36A;
   --tex:radial-gradient(ellipse 70% 50% at 50% 40%,rgba(120,220,160,.12),transparent 70%),repeating-radial-gradient(circle at 30% 30%,rgba(0,0,0,.06) 0 1px,transparent 1px 3px);""",
     ),
+    "lions-share": dict(
+        font="Berkshire+Swash",
+        css="""--display:"Berkshire Swash",Georgia,serif;
+  --bg1:#4A1B2A;--bg2:#12060B;--panel:rgba(255,232,205,.05);--panel2:rgba(255,232,205,.09);--line:rgba(240,190,90,.24);
+  --ink:#F7EEE2;--muted:#C7AFA6;--accent:#F0BE5A;--accent-ink:#2A1408;--c:#E0705A;--good:#8FDDA0;--bad:#F28A7A;
+  --card:#F6EEDD;--card-ink:#24160F;--card-muted:#5E4C40;--k1:#8A7F72;--k2:#B9851C;--k3:#3A6FAF;--k4:#B4433B;--k5:#55406E;
+  --pa:#8FC8F0;--pb:#F0B36A;
+  --tex:radial-gradient(ellipse 70% 45% at 50% 0%,rgba(240,190,90,.14),transparent 70%),repeating-linear-gradient(135deg,rgba(255,255,255,.022) 0 2px,transparent 2px 9px);""",
+    ),
 }
 
 GAMES = [
     ("fair-folk", "Fair Folk", "Async deckbuilder prototype: your opponent splits every hand you draw, and you choose which half to play."),
     ("loom", "Loom", "Async deckbuilder prototype: every card links two symbols, and you continue the thread your opponent left."),
     ("cut-a-deal", "Cut a Deal", "Async deckbuilder prototype: no shared market row. Every card the market reveals is cut into two piles, and your opponent picks first."),
+    ("lions-share", "Lion’s Share", "Async deckbuilder: cut every market reveal into two piles with one card face down. Your opponent takes a pile and you shop from the other."),
     ("relay", "Relay", "Async deckbuilder prototype: race the same gauntlet, and the cards you pass up go to your rival."),
 ]
 

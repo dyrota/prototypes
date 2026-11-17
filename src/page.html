@@ -158,6 +158,30 @@ button.card:disabled{cursor:default}
 .cd-sec.played{padding:8px 12px;background:none;border-style:dashed}
 .fac{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:calc(var(--cw)*.075);letter-spacing:.08em;text-transform:uppercase;text-shadow:0 1px 0 rgba(0,0,0,.4)}
 
+/* Lion's Share */
+.ls-track{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.ls-age{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ls-age b{margin-right:3px}
+.ls-age.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent),transparent 40%);background:var(--panel2)}
+.ls-age i{width:7px;height:7px;border-radius:50%;background:color-mix(in srgb,var(--muted),transparent 70%)}
+.ls-age i.done{background:var(--muted)}
+.ls-age i.now{background:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent),transparent 65%)}
+.ls-res{display:flex;gap:8px 12px;align-items:center;justify-content:center;flex-wrap:wrap}
+.ls-note{font-size:13px;color:var(--muted);text-align:center}
+.ls-key{text-transform:none;letter-spacing:0;font-weight:400;color:var(--accent);margin-left:6px;white-space:nowrap}
+.ls-pts{position:absolute;top:3px;left:5px;font-family:var(--mono);font-weight:700;font-size:calc(var(--cw)*.12);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.45)}
+.ls-slot{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ls-hide{min-width:calc(var(--cws)*.9)}
+.ls-hide.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.card.ls-hid .badge{white-space:nowrap}
+.card.ls-hid{outline:2px dashed var(--accent);outline-offset:2px}
+.card.ls-hid .cart{filter:saturate(.45) brightness(.8)}
+.card.ls-down{display:grid;place-items:center;outline:2px dashed var(--accent);outline-offset:2px}
+.card.ls-down span{font-family:var(--display);font-size:calc(var(--cw)*.5);line-height:1;color:var(--accent);text-shadow:0 3px 0 rgba(0,0,0,.5),0 0 18px rgba(0,0,0,.6)}
+.card.ls-ret::after{content:"↩︎";position:absolute;top:calc(var(--cw)*.27);right:calc(var(--cw)*.07);width:calc(var(--cw)*.2);height:calc(var(--cw)*.2);border-radius:50%;display:grid;place-items:center;background:var(--card-ink);color:var(--card);font-size:calc(var(--cw)*.13);line-height:1}
+.cd-sec.ls-wait{padding:8px 12px;background:none;border-style:dashed}
+@media (max-width:640px){.ls-played .card,.ls-wait .card{--cw:58px}.ls-played .ctext,.ls-wait .ctext{display:none}.ls-age{padding:3px 8px;font-size:10px}.ls-track{gap:5px}}
+
 /* Loom thread */
 .loom{width:100%;display:flex;flex-direction:column;gap:12px;align-items:center}
 .thread{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;row-gap:30px;padding:22px 14px 32px;border-radius:18px;background:var(--panel);border:1px solid var(--line);width:100%;min-height:110px}

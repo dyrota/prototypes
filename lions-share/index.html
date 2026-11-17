@@ -1,0 +1,1315 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>Lion’s Share</title>
+<meta name="description" content="Async deckbuilder: cut every market reveal into two piles with one card face down. Your opponent takes a pile and you shop from the other.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a game table. Title screen menu; in game, opponent plate on top, the play area in the middle,
+   and a sticky bottom with your plate, actions and fanned hand. Each game commits to one dark theme. */
+:root{
+  color-scheme:dark;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --cw:120px; --cws:100px; --cwm:96px;
+  --display:"Berkshire Swash",Georgia,serif;
+  --bg1:#4A1B2A;--bg2:#12060B;--panel:rgba(255,232,205,.05);--panel2:rgba(255,232,205,.09);--line:rgba(240,190,90,.24);
+  --ink:#F7EEE2;--muted:#C7AFA6;--accent:#F0BE5A;--accent-ink:#2A1408;--c:#E0705A;--good:#8FDDA0;--bad:#F28A7A;
+  --card:#F6EEDD;--card-ink:#24160F;--card-muted:#5E4C40;--k1:#8A7F72;--k2:#B9851C;--k3:#3A6FAF;--k4:#B4433B;--k5:#55406E;
+  --pa:#8FC8F0;--pb:#F0B36A;
+  --tex:radial-gradient(ellipse 70% 45% at 50% 0%,rgba(240,190,90,.14),transparent 70%),repeating-linear-gradient(135deg,rgba(255,255,255,.022) 0 2px,transparent 2px 9px);
+}
+@media (max-width:640px){:root{--cw:84px;--cws:74px;--cwm:76px}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg2);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+#app{min-height:100%;position:relative;background:radial-gradient(120% 90% at 50% 0%,var(--bg1),var(--bg2) 72%) fixed}
+#app::before{content:"";position:fixed;inset:0;pointer-events:none;background:var(--tex);opacity:.9}
+#app>*:not(.overlay){position:relative}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.1;text-wrap:balance;font-weight:700}
+h2{font-size:26px;color:var(--accent)}
+h3{font-size:17px;margin-top:4px}
+p{margin:0}
+a{color:var(--accent)}
+.muted{color:var(--muted)} .gold{color:var(--accent)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:12px;padding:9px 16px;font-weight:700;display:inline-flex;flex-direction:column;align-items:center;gap:1px;transition:transform .08s,box-shadow .08s,border-color .12s}
+.btn:hover{border-color:var(--accent)}
+.btn small{font-family:var(--body);font-size:12px;font-weight:400;opacity:.8}
+.btn.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--accent),white 18%),var(--accent));color:var(--accent-ink);border-color:transparent;box-shadow:0 4px 0 color-mix(in srgb,var(--accent),black 45%),0 10px 20px rgba(0,0,0,.35)}
+.btn.primary:active{transform:translateY(3px);box-shadow:0 1px 0 color-mix(in srgb,var(--accent),black 45%)}
+.btn.big{font-family:var(--display);font-size:18px;padding:12px 24px}
+.btn.small{padding:5px 11px;font-size:13px;border-radius:9px}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;font-weight:700}
+.icon{width:40px;height:40px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--panel2);display:grid;place-items:center;color:var(--ink)}
+.icon svg{width:19px;height:19px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);white-space:nowrap}
+.chip.gold{color:var(--accent);border-color:color-mix(in srgb,var(--accent),transparent 50%)}
+.chip.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad),transparent 50%)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.row.center{justify-content:center}
+.spread{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+
+/* title screen */
+.title{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding-block:40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow:hidden}
+.title-inner{position:relative;display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center;max-width:560px;z-index:1}
+.logo{font-size:clamp(58px,14vw,120px);line-height:.9;color:var(--accent);letter-spacing:.01em;text-shadow:0 0 50px color-mix(in srgb,var(--c),transparent 40%),0 5px 0 rgba(0,0,0,.45);animation:float 7s ease-in-out infinite}
+.tag{font-size:18px;color:var(--muted);max-width:36ch}
+.menu{display:flex;flex-direction:column;gap:12px;width:min(340px,100%)}
+.menu .btn{width:100%}
+.menu-row{display:flex;gap:10px}.menu-row .btn{flex:1}
+.opt{display:flex;flex-direction:column;align-items:center;gap:6px}
+.seg{display:flex;gap:4px;padding:4px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+.seg .btn{border-radius:999px;border-color:transparent;background:none}
+.seg .btn.on{background:var(--accent);color:var(--accent-ink)}
+.notice{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-size:14px}
+.foot{font-size:13px;color:var(--muted);max-width:42ch}
+.deco{position:absolute;inset:0;pointer-events:none;display:grid;place-items:center}
+.deco .card{position:absolute;--cw:150px;opacity:.5}
+.deco .d1{transform:translate(-300px,-40px) rotate(-18deg);animation:float 9s ease-in-out infinite}
+.deco .d2{transform:translate(300px,-110px) rotate(14deg);animation:float 8s ease-in-out -2s infinite}
+.deco .d3{transform:translate(330px,170px) rotate(-6deg);animation:float 10s ease-in-out -4s infinite;opacity:.3}
+@media (max-width:640px){.deco .d1{transform:translate(-120px,-260px) rotate(-18deg)}.deco .d2{transform:translate(120px,-280px) rotate(14deg)}.deco .d3{display:none}}
+
+/* table */
+.stage{min-height:100vh;min-height:100dvh;max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-top:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hud{display:flex;align-items:center;gap:10px}
+.hud .plate{flex:0 1 380px}
+.hud-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.round{font-family:var(--mono);font-size:12.5px;color:var(--muted);padding:5px 10px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+.plate{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:6px 14px 6px 6px;min-width:0;transition:box-shadow .3s,border-color .3s}
+.plate.active{border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 0 26px color-mix(in srgb,var(--c),transparent 55%)}
+.avatar{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-size:19px;background:var(--c);color:var(--bg2)}
+.plate.me .avatar{background:var(--accent);color:var(--accent-ink)}
+.pl-body{min-width:0;flex:1}
+.pl-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-info{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-score{display:flex;align-items:baseline;gap:3px;font-family:var(--mono)}
+.pl-score b{font-size:26px;color:var(--accent);line-height:1}
+.prompt{text-align:center;font-family:var(--display);font-size:clamp(18px,2.6vw,24px);padding:6px 8px 0;text-wrap:balance;min-height:1.6em}
+.prompt .muted{font-family:var(--body);font-size:14px}
+.prompt.new{animation:slidein .35s ease-out}
+.arena{flex:1;display:flex;flex-direction:column;align-items:center;gap:14px;padding-block:6px 12px}
+.bottom{position:sticky;bottom:0;z-index:5;display:flex;flex-direction:column;gap:6px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px));background:linear-gradient(to top,var(--bg2) 55%,color-mix(in srgb,var(--bg2),transparent 100%))}
+.tray{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:14px}
+.tray .plate{flex:0 1 320px}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-left:auto;justify-content:flex-end}
+.hint{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
+.hand{display:flex;justify-content:center;align-items:flex-end;min-height:calc(var(--cw)*1.05);padding:16px 0 4px;flex-wrap:nowrap}
+.hand .card{margin-left:calc(var(--cw)*-.14);transform:translateY(var(--y,0px)) rotate(var(--r,0deg));transform-origin:50% 130%;transition:transform .15s,box-shadow .15s}
+.hand .card:first-child{margin-left:0}
+.hand button.card:not(:disabled):hover,.hand button.card:not(:disabled):focus-visible{transform:translateY(calc(var(--y,0px) - 22px)) rotate(0deg) scale(1.07);z-index:3}
+.hand .peek{opacity:.75}
+.peek-label{position:absolute;top:-2px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hand{position:relative}
+.empty{color:var(--muted);font-size:13px;align-self:center;text-align:center}
+.sub{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+/* cards */
+.card{--kc:var(--k1);width:var(--cw);aspect-ratio:5/7;flex:none;background:var(--card);color:var(--card-ink);border-radius:calc(var(--cw)*.08);border:2px solid var(--kc);
+  box-shadow:0 2px 0 rgba(0,0,0,.25),0 10px 20px rgba(0,0,0,.45);padding:calc(var(--cw)*.055);display:flex;flex-direction:column;gap:calc(var(--cw)*.03);text-align:left;position:relative;overflow:hidden;font-family:var(--body)}
+.k-a{--kc:var(--k1)} .k-b{--kc:var(--k2)} .k-c{--kc:var(--k3)} .k-d{--kc:var(--k4)} .k-e{--kc:var(--k5)}
+.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:4px}
+.cname{font-family:var(--display);font-size:calc(var(--cw)*.112);line-height:1.05;font-weight:700}
+.gem{flex:none;width:calc(var(--cw)*.21);height:calc(var(--cw)*.21);border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-family:var(--mono);font-size:calc(var(--cw)*.12);font-weight:700;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+.cart{flex:1 1 42%;min-height:0;border-radius:calc(var(--cw)*.05);background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--kc),white 35%),var(--kc) 75%);display:flex;align-items:center;justify-content:center;gap:6px;color:#fff;position:relative}
+.glyph{font-size:calc(var(--cw)*.34);line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.28)}
+.might{position:absolute;bottom:3px;right:5px;font-family:var(--mono);font-weight:700;font-size:calc(var(--cw)*.12);text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.ctext{font-size:calc(var(--cw)*.087);line-height:1.2;color:var(--card-muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical}
+.cfoot{font-size:calc(var(--cw)*.085);font-weight:700;color:var(--bad)}
+.badge{position:absolute;bottom:5px;right:5px;background:var(--card-ink);color:var(--card);font-family:var(--mono);font-size:11px;border-radius:999px;padding:0 6px}
+.card.sm{--cw:var(--cws)} .card.mini{--cw:var(--cwm)}
+.card.back{background:radial-gradient(circle at 50% 50%,color-mix(in srgb,var(--accent),transparent 30%) 0 14%,transparent 15%),repeating-linear-gradient(45deg,var(--c) 0 7px,color-mix(in srgb,var(--c),black 35%) 7px 14px);border-color:var(--accent)}
+.card.back.none{opacity:.25}
+button.card{cursor:pointer;transition:transform .15s,box-shadow .15s,filter .15s}
+button.card:disabled{cursor:default}
+.card.dim{filter:grayscale(.75) brightness(.6)}
+.card.gone{opacity:.35}
+.card.glow{box-shadow:0 0 0 2px var(--good),0 0 20px color-mix(in srgb,var(--good),transparent 45%),0 10px 20px rgba(0,0,0,.45)}
+.card.restart{box-shadow:0 0 0 2px var(--accent),0 10px 20px rgba(0,0,0,.45)}
+.shop button.card:not(:disabled):hover,.spoils button.card:hover,.pile button.card:hover{transform:translateY(-6px) scale(1.04)}
+.banishable:hover{box-shadow:0 0 0 3px var(--bad),0 0 20px color-mix(in srgb,var(--bad),transparent 40%)!important;transform:translateY(-6px) rotate(-3deg)}
+.card.deal{animation:deal .5s cubic-bezier(.2,.9,.3,1.25) both;animation-delay:calc(var(--i,0)*70ms)}
+.stacks{display:flex;gap:22px;justify-content:center;align-items:flex-end}
+.stack{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.stack .card{--cw:54px}
+.stack b{color:var(--ink);font-family:var(--mono)}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--cwm),1fr));gap:14px 10px;width:100%;justify-items:center;padding:14px;border-radius:18px;background:var(--panel);border:1px solid var(--line)}
+.purse{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;justify-content:center}
+.purse-n{font-family:var(--display);font-size:60px;color:var(--accent);line-height:1}
+.purse-l{font-family:var(--display);font-size:20px}
+
+/* Fair Folk piles */
+.piles{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%}
+.pile{--pc:var(--pa);border:2px dashed var(--pc);border-radius:18px;padding:14px 12px;display:flex;flex-direction:column;gap:12px;align-items:center;background:color-mix(in srgb,var(--pc),transparent 92%);min-width:0}
+.pile.pB{--pc:var(--pb)}
+.pile-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.pile-name{font-family:var(--display);font-size:22px;color:var(--pc)}
+.pile-cards{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;min-height:calc(var(--cws)*1.4)}
+
+/* Cut a Deal */
+.res{display:flex;gap:22px;align-items:baseline;flex-wrap:wrap;justify-content:center}
+.res .r{font-family:var(--display);font-size:20px}
+.res .r b{font-size:46px;line-height:1;margin-right:6px}
+.res .coin b{color:var(--accent)} .res .mi b{color:var(--bad)}
+.cd-sec{display:flex;flex-direction:column;gap:8px;align-items:center;width:100%;padding:12px;border-radius:18px;background:var(--panel);border:1px solid var(--line)}
+.cd-row{display:flex;gap:12px;width:100%;flex-wrap:wrap}
+.cd-row .mkt{flex:3 1 320px} .cd-row .always{flex:1 1 220px}
+.cd-sec.played{padding:8px 12px;background:none;border-style:dashed}
+.fac{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:calc(var(--cw)*.075);letter-spacing:.08em;text-transform:uppercase;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+
+/* Lion's Share */
+.ls-track{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.ls-age{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ls-age b{margin-right:3px}
+.ls-age.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent),transparent 40%);background:var(--panel2)}
+.ls-age i{width:7px;height:7px;border-radius:50%;background:color-mix(in srgb,var(--muted),transparent 70%)}
+.ls-age i.done{background:var(--muted)}
+.ls-age i.now{background:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent),transparent 65%)}
+.ls-res{display:flex;gap:8px 12px;align-items:center;justify-content:center;flex-wrap:wrap}
+.ls-note{font-size:13px;color:var(--muted);text-align:center}
+.ls-key{text-transform:none;letter-spacing:0;font-weight:400;color:var(--accent);margin-left:6px;white-space:nowrap}
+.ls-pts{position:absolute;top:3px;left:5px;font-family:var(--mono);font-weight:700;font-size:calc(var(--cw)*.12);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.45)}
+.ls-slot{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ls-hide{min-width:calc(var(--cws)*.9)}
+.ls-hide.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.card.ls-hid .badge{white-space:nowrap}
+.card.ls-hid{outline:2px dashed var(--accent);outline-offset:2px}
+.card.ls-hid .cart{filter:saturate(.45) brightness(.8)}
+.card.ls-down{display:grid;place-items:center;outline:2px dashed var(--accent);outline-offset:2px}
+.card.ls-down span{font-family:var(--display);font-size:calc(var(--cw)*.5);line-height:1;color:var(--accent);text-shadow:0 3px 0 rgba(0,0,0,.5),0 0 18px rgba(0,0,0,.6)}
+.card.ls-ret::after{content:"↩︎";position:absolute;top:calc(var(--cw)*.27);right:calc(var(--cw)*.07);width:calc(var(--cw)*.2);height:calc(var(--cw)*.2);border-radius:50%;display:grid;place-items:center;background:var(--card-ink);color:var(--card);font-size:calc(var(--cw)*.13);line-height:1}
+.cd-sec.ls-wait{padding:8px 12px;background:none;border-style:dashed}
+@media (max-width:640px){.ls-played .card,.ls-wait .card{--cw:58px}.ls-played .ctext,.ls-wait .ctext{display:none}.ls-age{padding:3px 8px;font-size:10px}.ls-track{gap:5px}}
+
+/* Loom thread */
+.loom{width:100%;display:flex;flex-direction:column;gap:12px;align-items:center}
+.thread{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;row-gap:30px;padding:22px 14px 32px;border-radius:18px;background:var(--panel);border:1px solid var(--line);width:100%;min-height:110px}
+.bead,.sym,.fb{--bc:var(--muted);border-radius:50%;display:inline-grid;place-items:center;color:#fff;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--bc),white 35%),var(--bc) 70%);box-shadow:inset 0 -3px 0 rgba(0,0,0,.25),0 3px 8px rgba(0,0,0,.35);flex:none;line-height:1}
+.S{--bc:var(--sS)} .M{--bc:var(--sM)} .L{--bc:var(--sL)} .W{--bc:var(--sW)}
+.bead{width:50px;height:50px;font-size:24px;position:relative;border:0}
+.bead small{position:absolute;top:100%;margin-top:6px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.bead.start{outline:2px dashed var(--muted);outline-offset:4px}
+.bead.end{box-shadow:0 0 0 3px var(--accent),0 0 26px var(--accent)}
+.bead.dead{filter:grayscale(1);opacity:.55}
+.bead.new{animation:beadpop .45s cubic-bezier(.2,.9,.3,1.4)}
+.link{width:30px;height:5px;background:var(--thread);border-radius:3px;flex:none;box-shadow:0 0 8px color-mix(in srgb,var(--thread),transparent 50%)}
+.link.dead{background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 8px);box-shadow:none}
+.sym{width:24px;height:24px;font-size:13px;vertical-align:middle}
+.sym.any,.fb.any{background:transparent;color:var(--ink);border:1.5px dashed var(--muted);box-shadow:none}
+.links-face{display:flex;align-items:center;gap:calc(var(--cw)*.04)}
+.fb{width:calc(var(--cw)*.3);height:calc(var(--cw)*.3);font-size:calc(var(--cw)*.17)}
+.fb.any{color:#fff;border-color:rgba(255,255,255,.7)}
+.arrow{color:#fff;font-size:calc(var(--cw)*.13);text-shadow:0 1px 0 rgba(0,0,0,.3)}
+.loom-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.meter{display:flex;gap:4px}
+.notch{width:30px;height:16px;border-radius:4px;background:var(--panel2);border:1px solid var(--line);font-size:9.5px;display:grid;place-items:center;font-family:var(--mono)}
+.notch.on{background:var(--thread);border-color:var(--thread)}
+.notch.b{border-color:var(--accent);color:var(--accent)} .notch.b.on{color:#fff}
+.picker{display:flex;gap:12px;padding:14px 18px;background:var(--bg1);border:1px solid var(--accent);border-radius:18px;align-items:center;flex-wrap:wrap;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,.5);animation:slidein .25s ease-out}
+.picker .bead{cursor:pointer}
+.picker .bead:hover{transform:scale(1.12)}
+
+/* Relay */
+.track{display:flex;gap:5px;width:100%;justify-content:center;flex-wrap:wrap}
+.node{width:44px;padding:4px 0 5px;border-radius:10px;border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--mono);font-size:11px}
+.node.now{border-color:var(--accent);background:color-mix(in srgb,var(--accent),transparent 85%);box-shadow:0 0 14px color-mix(in srgb,var(--accent),transparent 50%)}
+.node.past{opacity:.75}
+.marks{display:flex;gap:3px;min-height:14px}
+.mk{width:14px;height:14px;border-radius:3px;font-size:9px;display:grid;place-items:center;font-weight:700;color:#111}
+.mk.W{background:var(--good)} .mk.L{background:var(--bad)} .mk.opp{border-radius:50%}
+.battle{display:flex;gap:28px;align-items:center;justify-content:center;flex-wrap:wrap;width:100%}
+.foe{width:min(230px,64vw);aspect-ratio:5/6;border-radius:20px;background:radial-gradient(circle at 50% 32%,color-mix(in srgb,var(--c),var(--bg1) 45%),var(--bg2) 80%);border:2px solid color-mix(in srgb,var(--c),transparent 40%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 14px 34px rgba(0,0,0,.55),inset 0 0 40px rgba(0,0,0,.4);text-align:center;padding:14px}
+.foe-art{font-size:84px;line-height:1;color:var(--ink);filter:drop-shadow(0 4px 0 rgba(0,0,0,.45))}
+.foe-name{font-family:var(--display);font-size:30px;line-height:1}
+.foe-stats{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.foe.hit{animation:hit .5s}
+.foe.roar{animation:roar .6s}
+.result{display:flex;flex-direction:column;align-items:center;gap:6px;animation:slidein .4s ease-out}
+.result .rt{font-family:var(--display);font-size:clamp(44px,8vw,64px);line-height:1}
+.result.win .rt{color:var(--good)} .result.loss .rt{color:var(--bad)}
+.result .rm{font-family:var(--mono);font-size:22px}
+.line,.spoils{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:grid;place-items:center;padding:16px;animation:fade .2s}
+.modal{background:var(--bg1);border:1px solid var(--line);border-radius:20px;max-width:580px;width:100%;max-height:calc(100% - 16px);overflow:auto;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-align:left}
+.modal.center{align-items:center;text-align:center;gap:16px}
+.modal ol,.modal ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px}
+.modal .lead{font-size:17px}
+.watch{border-left:3px solid var(--c);padding-left:12px;color:var(--muted)}
+.end-title{font-family:var(--display);font-size:clamp(48px,11vw,80px);color:var(--accent);line-height:1;animation:beadpop .6s cubic-bezier(.2,.9,.3,1.3)}
+.end-scores{display:flex;gap:28px}
+.end-scores div{display:flex;flex-direction:column;align-items:center}
+.end-scores b{font-family:var(--mono);font-size:30px}
+.log{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:3px;max-height:200px;overflow:auto}
+.glist{display:flex;flex-direction:column;gap:8px}
+.gitem{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.pill{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.pill.go{background:var(--good);color:#111;border-color:var(--good)}
+.pill.wait{color:var(--muted)} .pill.done{color:var(--muted);border-style:dashed}
+.pop{position:fixed;z-index:40;pointer-events:none;font-family:var(--display);font-size:24px;color:var(--accent);text-shadow:0 2px 8px rgba(0,0,0,.7);white-space:nowrap;animation:popup 1.4s ease-out forwards}
+.pop.bad{color:var(--bad)} .pop.good{color:var(--good)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg2);padding:10px 16px;border-radius:12px;font-weight:700;z-index:50;max-width:calc(100% - 32px)}
+
+@keyframes deal{from{opacity:0;transform:translateY(90px) rotate(-14deg) scale(.7)}}
+@keyframes slidein{from{opacity:0;transform:translateY(-8px)}}
+@keyframes beadpop{0%{transform:scale(.2)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes popup{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-70%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-190%)}}
+@keyframes float{0%,100%{translate:0 0}50%{translate:0 -10px}}
+@keyframes hit{0%,100%{transform:none}20%{transform:translateX(-10px) rotate(-3deg)}40%{transform:translateX(10px) rotate(3deg)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@keyframes roar{0%,100%{transform:none}30%{transform:scale(1.08)}}
+@keyframes fade{from{opacity:0}}
+@media (max-width:640px){
+  .piles{grid-template-columns:1fr}
+  .hud .plate{flex:1}
+  .round{display:none}
+  .tray .plate{flex:1 1 100%}
+  .actions{margin-left:0;width:100%;justify-content:center}
+  .bead{width:42px;height:42px;font-size:20px}
+  .link{width:18px}
+  .foe-art{font-size:64px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}}
+</style>
+<div id="app"></div>
+<script>
+// ---------- shared helpers (used by every game engine and the shell) ----------
+const rnd=n=>Math.floor(Math.random()*n);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+const rep=(k,n)=>Array(n).fill(k);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clean=s=>String(s).replace(/[<>&"']/g,'');
+const newId=()=>'g'+Math.random().toString(36).slice(2,10);
+const emptyPiles=s=>Object.values(s).filter(v=>v===0).length;
+const T='︎'; // text presentation, so glyphs never render as emoji
+
+function draw(p,n){
+  const out=[];
+  for(let k=0;k<n;k++){
+    if(!p.deck.length){if(!p.discard.length)break;p.deck=shuffle(p.discard);p.discard=[]}
+    out.push(p.deck.pop());
+  }
+  return out;
+}
+// Seat 2 closes each round; the game ends at the close of the round where the end was triggered.
+function passTurn(st,maxRounds){
+  const was=st.turn;st.turn=1-was;
+  if(was===1){if(st.endTriggered||st.round>=maxRounds)st.over=true;else st.round++}
+  return 'commit';
+}
+
+// ---------- effects: one-shot animation flags, floating pop-ups, sounds ----------
+// Handlers set these; the shell consumes them after the next render.
+const FX={pops:[],deal:false,bead:false,fight:false};
+function pop(seat,text,kind){FX.pops.push({seat,text,kind:kind||''})}
+let MUTED=false,AC=null;
+const SOUNDS={
+  tap:[[700,.03,'triangle']],
+  card:[[520,.05,'triangle'],[310,.05,'triangle']],
+  coin:[[988,.06],[1319,.1]],
+  score:[[523,.08],[659,.08],[784,.14]],
+  bad:[[196,.16,'sawtooth'],[147,.22,'sawtooth']],
+  win:[[523,.1],[659,.1],[784,.1],[1047,.3]],
+  lose:[[392,.16],[330,.16],[262,.32]],
+};
+function sfx(name){
+  if(MUTED||typeof window==='undefined')return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended')AC.resume();
+    let t=AC.currentTime;
+    for(const [f,d,type] of SOUNDS[name]||[]){
+      const o=AC.createOscillator(),g=AC.createGain();
+      o.type=type||'sine';o.frequency.value=f;
+      g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.1,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+      o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.8;
+    }
+  }catch(e){}
+}
+let toastTimer;
+function toast(msg){
+  if(typeof document==='undefined')return;
+  let t=document.querySelector('.toast');
+  if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}
+  t.textContent=msg;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.remove(),3200);
+}
+
+// ---------- card rendering ----------
+const stripTags=s=>String(s).replace(/<[^>]+>/g,'');
+function cardHTML(def,o={}){
+  const tag=o.btn?'button':'div';
+  return `<${tag} class="card k-${def.kind||'a'} ${o.cls||''}"${o.style?` style="${o.style}"`:''} ${o.attrs||''} ${o.btn&&o.disabled?'disabled':''} title="${esc(def.n+(def.txt?': '+stripTags(def.txt):''))}">
+    <div class="chead"><span class="cname">${def.n}</span>${def.cost?`<span class="gem">${def.cost}</span>`:''}</div>
+    <div class="cart">${o.face||def.face||`<span class="glyph">${def.art||''}</span>`}</div>
+    <div class="ctext">${def.txt||''}</div>
+    ${o.foot?`<div class="cfoot">${o.foot}</div>`:''}${o.badge!=null?`<span class="badge">${o.badge}</span>`:''}</${tag}>`;
+}
+// Fan position for card i of n in a hand.
+function fanStyle(i,n){const d=i-(n-1)/2;return `--i:${i};--r:${(d*3.5).toFixed(1)}deg;--y:${(Math.pow(Math.abs(d),1.7)*4).toFixed(1)}px`}
+function handHTML(items){
+  return items.map((it,i)=>cardHTML(it.def,{...it.o,cls:`${(it.o&&it.o.cls)||''}${FX.deal?' deal':''}`,style:fanStyle(i,items.length)})).join('');
+}
+const backsHTML=n=>Array.from({length:n},(_,i)=>`<div class="card back${FX.deal?' deal':''}" style="${fanStyle(i,n)}"></div>`).join('');
+const stackHTML=(label,n)=>`<div class="stack"><div class="card back${n?'':' none'}"></div><span>${label} <b>${n}</b></span></div>`;
+function shopHTML(defs,supply,glam,canAct,action){
+  return `<div class="shop">${Object.keys(supply).map(k=>{
+    const d=defs[k],ok=canAct&&supply[k]>0&&glam>=d.cost;
+    return cardHTML(d,{btn:true,disabled:!ok,cls:`mini${ok?' glow':supply[k]?'':' gone'}${canAct&&!ok?' dim':''}`,badge:`×${supply[k]}`,
+      attrs:`data-a="${action}" data-i="${k}" aria-label="Buy ${d.n} for ${d.cost}"`});
+  }).join('')}</div>`;
+}
+
+// =====================================================================
+// LION'S SHARE: a full deckbuilder built on an I-cut-you-choose market.
+// Each turn ends with you revealing market cards and cutting them into two
+// piles, one card face down. Your opponent shops from one pile; the other
+// pile is yours next turn. Taking a pile only to block costs you: use
+// nothing from it and the cutter scores a point per card (or, as a variant,
+// gets the pile too).
+// The market runs through three ages over a fixed 14 rounds.
+// =====================================================================
+const LS_F={g:'Guild',b:'Blade',m:'Mystic'};
+const LS_ROUNDS=14,LS_AGE_END=[4,9,14],LS_CUT=5,LS_PU=1;
+const LS_AGE_NAME=['Age I','Age II','Age III'];
+const lsAgeOf=r=>r<=LS_AGE_END[0]?0:r<=LS_AGE_END[1]?1:2;
+const LSC={
+  copper:{n:'Copper',c:1,art:'◉',plain:1},
+  militia:{n:'Militia',m:1,art:'↟',plain:1},
+  tribute:{n:'Tribute',pay:4,gain:1,art:'⚖',txt:'Pay 4 coins: +1 point. Once per turn.'},
+  patrol:{n:'Patrol',use:3,gain:1,art:'⚑',txt:'Spend 3 might: +1 point. Once per turn.'},
+  // Guild: coins
+  peddler:{n:'Peddler',cost:2,f:'g',c:1,art:'◑',txt:'Follow-up: draw 1.'},
+  broker:{n:'Broker',cost:3,f:'g',c:2,art:'⚭',txt:'Follow-up: +1 coin.'},
+  haggler:{n:'Haggler',cost:3,f:'g',c:1,art:'%',txt:'Your next buy this turn costs 2 less.'},
+  fence:{n:'Fence',cost:4,f:'g',c:2,art:'✂',txt:'You may banish a card from your hand or play area.'},
+  banker:{n:'Banker',cost:5,f:'g',c:2,art:'♦',txt:'+1 coin for each other Guild card you’ve played this turn.'},
+  patron:{n:'Patron',cost:6,f:'g',c:3,vp:2,art:'❂'},
+  // Blade: might
+  scout:{n:'Scout',cost:2,f:'b',m:2,art:'➶'},
+  duelist:{n:'Duelist',cost:3,f:'b',m:2,art:'†',txt:'Follow-up: +2 might.'},
+  vanguard:{n:'Vanguard',cost:3,f:'b',m:2,art:'➤',txt:'If this is the first card you play this turn: +2 might.'},
+  recruiter:{n:'Recruiter',cost:4,f:'b',m:2,art:'⚐',txt:'Your next buy this turn goes on top of your deck.'},
+  looter:{n:'Looter',cost:4,f:'b',m:2,art:'⚒',txt:'+1 coin for each foe you defeat later this turn.'},
+  captain:{n:'Captain',cost:5,f:'b',m:3,art:'✠',txt:'+1 might for each other Blade card you’ve played this turn.'},
+  warlord:{n:'Warlord',cost:6,f:'b',m:4,vp:2,art:'✪'},
+  champion:{n:'Champion',cost:8,f:'b',m:6,vp:3,art:'♘'},
+  // Mystic: cards and tricks
+  seer:{n:'Seer',cost:3,f:'m',c:1,art:'⊙',txt:'Draw 1.'},
+  adept:{n:'Adept',cost:3,f:'m',art:'◐',txt:'Choose: +2 coins or +2 might.'},
+  surveyor:{n:'Surveyor',cost:3,f:'m',c:1,m:1,art:'⌖',txt:'When you cut this turn, reveal 1 more card.'},
+  sage:{n:'Sage',cost:4,f:'m',c:1,m:1,art:'✦',txt:'Follow-up: draw 2.'},
+  mimic:{n:'Mimic',cost:4,f:'m',art:'❏',txt:'The next card you play is played twice.'},
+  oracle:{n:'Oracle',cost:5,f:'m',art:'☾',txt:'Draw 3.'},
+  archmage:{n:'Archmage',cost:7,f:'m',c:2,m:2,vp:3,art:'✹'},
+  // Prizes: points only
+  statue:{n:'Statue',cost:5,vp:2,art:'♖',dead:1},
+  monument:{n:'Monument',cost:7,vp:4,art:'▲',dead:1},
+  crown:{n:'Crown',cost:9,vp:6,art:'♔',dead:1},
+  // Foes
+  goblin:{n:'Goblin',need:2,pts:1,gc:1,art:'⊛',txt:'Then +1 coin.'},
+  wolf:{n:'Wolf',need:3,pts:2,art:'☗'},
+  brigand:{n:'Brigand',need:4,pts:2,art:'☋',txt:'Then you may banish a card from your hand or play area.'},
+  troll:{n:'Troll',need:5,pts:3,art:'⛰',txt:'Then draw 1.'},
+  wraith:{n:'Wraith',need:6,pts:4,art:'☠'},
+  giant:{n:'Giant',need:7,pts:5,art:'♉'},
+  dragon:{n:'Dragon',need:9,pts:7,art:'⚸'},
+  thief:{n:'Thief',need:2,pts:1,threat:1,art:'☂'},
+  raiders:{n:'Raiders',need:4,pts:2,threat:2,art:'☄'},
+  warband:{n:'Warband',need:5,pts:3,threat:2,art:'⚉'},
+};
+// What each age's market deck holds. Costs and foes climb; points arrive in Age III.
+const LS_AGES=[
+  {peddler:4,broker:4,haggler:3,fence:3,scout:4,duelist:4,vanguard:3,recruiter:2,seer:4,adept:4,surveyor:2,sage:2,goblin:5,wolf:4,thief:2},
+  {broker:2,haggler:2,fence:3,banker:4,patron:2,duelist:2,recruiter:3,looter:3,captain:4,warlord:2,adept:1,surveyor:2,sage:3,mimic:3,oracle:4,statue:2,
+    wolf:3,brigand:4,troll:4,wraith:3,raiders:2},
+  {fence:2,banker:2,patron:4,looter:2,captain:2,warlord:4,champion:2,sage:2,mimic:2,oracle:2,archmage:3,statue:4,monument:4,crown:2,
+    brigand:2,troll:3,wraith:5,giant:4,dragon:3,warband:2},
+];
+const LS_ALWAYS=['tribute','patrol'];
+const lsPl=(n,w)=>`${n} ${w}${n===1?'':'s'}`;
+for(const d of Object.values(LSC)){
+  d.art+=T;
+  const bits=[],star=d.vp||d.pts||d.gain;
+  const pts=star?`<span class="ls-pts">★${T} ${star}</span>`:'';
+  if(d.need){
+    d.kind='e';bits.push(`Defeat with ${d.need} might: +${lsPl(d.pts,'point')}.`);
+    if(d.threat)bits.push(`Threat: if it’s still in your shop when your turn ends, your opponent gets ${lsPl(d.threat,'point')}.`);
+    d.face=`<span class="glyph">${d.art}</span>${pts}<span class="might">⚔${T} ${d.need}</span>`;
+  }else{
+    d.kind=d.use?'e':d.f?{g:'b',m:'c',b:'d'}[d.f]:'a';
+    if(d.c)bits.push(`+${lsPl(d.c,'coin')}.`);
+    if(d.m)bits.push(`+${d.m} might.`);
+    if(d.vp)bits.push(`Worth ${lsPl(d.vp,'point')}.`);
+    d.face=`<span class="glyph">${d.art}</span>${pts}${d.f?`<span class="fac">${LS_F[d.f]}</span>`:d.use?`<span class="might">⚔${T} ${d.use}</span>`:''}`;
+  }
+  if(d.txt)bits.push(d.txt);
+  d.txt=bits.join(' ');
+  if(d.pay)d.cost=d.pay;
+}
+const lsDeck=a=>shuffle(Object.entries(LS_AGES[a]).flatMap(([k,n])=>rep(k,n)));
+const lsOwned=(st,i)=>{const P=st.players[i];return P.deck.concat(P.discard,P.hand,st.turn===i?st.played:[])};
+const lsScore=(st,i)=>st.players[i].pts+lsOwned(st,i).reduce((s,k)=>s+(LSC[k].vp||0),0);
+// The player who is behind sees the face-down card before picking.
+const lsPeek=(st,i)=>!LS_TUNE.nopeek&&lsScore(st,i)<lsScore(st,1-i);
+const lsTax=st=>st.unused!=='bounce';
+const lsLastCut=st=>st.turn===0&&st.round>=LS_ROUNDS;
+const lsFresh=()=>({coin:0,might:0,lastF:null,cnt:{g:0,b:0,m:0},n:0,twice:0,disc:0,loot:0,top:false,extra:0,draws:0,pending:[],used:{},took:false});
+
+// ---------- playing a card ----------
+// One resolution of a card's effect. Works on the game state and on the bot's scratch copies alike.
+function lsFx(S,k){
+  const d=LSC[k],fu=!!d.f&&S.lastF===d.f;
+  if(d.f)S.cnt[d.f]++;
+  let c=d.c||0,m=d.m||0;
+  switch(k){
+    case 'peddler':if(fu)S.draws++;break;
+    case 'broker':if(fu)c++;break;
+    case 'duelist':if(fu)m+=2;break;
+    case 'sage':if(fu)S.draws+=2;break;
+    case 'vanguard':if(S.n===0)m+=2;break;
+    case 'banker':c+=S.cnt.g-1;break;
+    case 'captain':m+=S.cnt.b-1;break;
+    case 'seer':S.draws++;break;
+    case 'oracle':S.draws+=3;break;
+    case 'haggler':S.disc+=2;break;
+    case 'recruiter':S.top=true;break;
+    case 'looter':S.loot++;break;
+    case 'surveyor':S.extra++;break;
+    case 'fence':S.pending.push('banish');break;
+    case 'adept':S.pending.push('adept');break;
+    case 'mimic':S.twice++;break;
+  }
+  S.coin+=c;S.might+=m;S.lastF=d.f||null;
+  return fu&&/Follow-up/.test(d.txt);
+}
+function lsPlayS(S,k){
+  const tw=S.twice>0&&k!=='mimic';
+  if(tw)S.twice--;
+  let fu=lsFx(S,k);
+  if(tw)fu=lsFx(S,k)||fu;
+  S.n++;
+  return {fu,tw};
+}
+function lsGain(st,i,pts,quiet){
+  st.players[i].pts+=pts;
+  if(!quiet)pop(i,`+${lsPl(pts,'point')}`);
+}
+const lsPrice=(st,k)=>LSC[k].pay||Math.max(0,LSC[k].cost-st.disc);
+function lsReveal(st,n){
+  const a=lsAgeOf(st.turn===1?st.round+1:st.round),d=st.mk[a];
+  if(d.length<n)d.unshift(...lsDeck(a));
+  return {cards:d.splice(d.length-n,n),age:a};
+}
+
+// ---------- bot: valuing cards ----------
+// Test hooks for the sim harness: LS_TUNE.persona[seat], .cut[seat]='rand', .pick[seat]='rand'.
+const LS_TUNE={};
+const LS_PERSONAS=[{wc:1.15,wm:.85},{wc:1,wm:1},{wc:1.1,wm:.95}];
+function lsPersona(st,i){
+  if(LS_TUNE.persona&&LS_TUNE.persona[i])return LS_TUNE.persona[i];
+  st.bp=st.bp||[null,null];
+  if(!st.bp[i])st.bp[i]=LS_PERSONAS[rnd(LS_PERSONAS.length)];
+  return st.bp[i];
+}
+// Rough coins and might a card adds to a hand.
+function lsStat(k,X){
+  const d=LSC[k],pf=X.pf,dc=X.avgC,dm=X.avgM;let c=d.c||0,m=d.m||0;
+  switch(k){
+    case 'peddler':c+=dc*pf.g;m+=dm*pf.g;break;
+    case 'broker':c+=pf.g;break;
+    case 'duelist':m+=2*pf.b;break;
+    case 'vanguard':m+=1.5;break;
+    case 'banker':c+=4*X.sh.g;break;
+    case 'captain':m+=4*X.sh.b;break;
+    case 'adept':c+=1;m+=1;break;
+    case 'seer':c+=dc;m+=dm;break;
+    case 'sage':c+=2*dc*pf.m;m+=2*dm*pf.m;break;
+    case 'oracle':c+=3*dc;m+=3*dm;break;
+    case 'mimic':c+=1.6*dc+.3;m+=1.6*dm+.2;break;
+    case 'haggler':c+=1.4;break;
+    case 'looter':c+=.6;break;
+  }
+  return {c,m};
+}
+// Everything the bot needs to know about one seat's deck to value cards for it.
+function lsCtx(st,i,per){
+  const all=lsOwned(st,i),n=all.length,cnt={g:0,b:0,m:0},pf={},sh={};
+  for(const k of all){const f=LSC[k].f;if(f)cnt[f]++}
+  for(const f in cnt){sh[f]=cnt[f]/n;pf[f]=1-Math.pow(1-(cnt[f]+.5)/(n+1),3.5)}
+  const buyR=st.turn===i||i===1?st.round:st.round+1,Tl=Math.max(0,LS_ROUNDS-buyR);
+  per=per||{wc:1,wm:1};
+  const X={n,cnt,pf,sh,T:Tl,wc:per.wc,wm:per.wm,pu:per.pu,plays:Math.max(0,Math.min(Tl,Tl*5.5/(n+1)-.4)),avgC:.8,avgM:.3,thin:n>7?1:0};
+  let c=0,m=0;
+  for(const k of all){const s=lsStat(k,X);c+=s.c;m+=s.m}
+  X.avgC=c/n;X.avgM=m/n;
+  return X;
+}
+function lsWorth(k,X){
+  const d=LSC[k];
+  if(d.need)return d.pts+(k==='brigand'&&X.T>3?.6:0)+(k==='troll'?.4:0);
+  if(d.gain)return d.gain;
+  const s=lsStat(k,X),u=X.wc*s.c+X.wm*s.m+(k==='fence'?X.thin:0)+(k==='recruiter'?.4:0)+(k==='surveyor'?.7:0);
+  // A card takes a slot in a future hand, so it is only worth what it adds over the average card it crowds out.
+  return (d.vp||0)+(u-(X.wc*X.avgC+X.wm*X.avgM))*X.plays*(X.pu||LS_PU);
+}
+// Best set of buys and fights from `shop` ([{k,s}]) with c coins and m might.
+// o: {disc, loot, used, must}; must = the set has to include a card from the pile picked this turn. Returns {v, set:[{i,k}]} where i is the shop index, or -1 for an always-available card.
+function lsPlan(shop,c,m,X,o){
+  o=o||{};
+  const disc=o.disc||0,loot=o.loot||0,used=o.used||{},must=o.must;
+  let items=[],base=0;
+  shop.forEach((e,i)=>{
+    const d=LSC[e.k];
+    if(d.need){
+      if(d.threat)base-=d.threat;
+      if(d.need<=m)items.push({i,k:e.k,p:e.s==='p',cost:0,need:d.need,foe:1,gc:d.gc||0,v:lsWorth(e.k,X)+(d.threat||0)});
+    }else if(d.cost-disc<=c+loot*2+1){
+      const v=lsWorth(e.k,X);
+      if(v>.02||(must&&e.s==='p'))items.push({i,k:e.k,p:e.s==='p',cost:d.cost,need:0,card:1,v});
+    }
+  });
+  if(items.length>9)items=items.sort((a,b)=>b.v-a.v).slice(0,9);
+  if(!used.tribute&&c+loot*2>=4)items.push({i:-1,k:'tribute',cost:4,need:0,v:1});
+  if(!used.patrol&&m>=3)items.push({i:-1,k:'patrol',cost:0,need:3,v:1});
+  const n=items.length;let best=must?-99:0,bm=0;
+  for(let mask=1;mask<(1<<n);mask++){
+    let cost=0,need=0,v=0,foes=0,mx=0,pk=0,gc=0;
+    for(let j=0;j<n;j++)if(mask>>j&1){
+      const it=items[j];cost+=it.cost;need+=it.need;v+=it.v;
+      if(it.foe){foes++;gc+=it.gc}
+      if(it.p)pk++;
+      if(it.card&&it.cost>mx)mx=it.cost;
+    }
+    if(need>m||(must&&!pk))continue;
+    cost-=Math.min(disc,mx);
+    if(cost>c+loot*foes+gc)continue;
+    if(v>best){best=v;bm=mask}
+  }
+  const set=items.filter((_,j)=>bm>>j&1);
+  return {v:base+(bm?best:0),set,took:set.some(it=>it.p)};
+}
+// Best order to play a hand from the current turn state. Plain cards go last; the rest are searched.
+function lsBestOrder(st,hand,X){
+  const sp=[],pl=[];
+  hand.forEach((k,i)=>(LSC[k].plain?pl:sp).push(i));
+  const start={coin:st.coin||0,might:st.might||0,lastF:st.lastF||null,cnt:{...(st.cnt||{g:0,b:0,m:0})},n:st.n||0,twice:st.twice||0,disc:0,loot:0,top:false,extra:0,draws:0,pending:[]};
+  const plainBest=pl.reduce((b,i)=>{const d=LSC[hand[i]],u=X.wc*(d.c||0)+X.wm*(d.m||0);return u>b?u:b},0);
+  const score=(S,bonus)=>X.wc*S.coin+X.wm*S.might+S.draws*(X.wc*X.avgC+X.wm*X.avgM)*1.1+S.disc*.4+S.loot*.6+S.extra*.5+(S.top?.3:0)
+    +S.pending.reduce((s,p)=>s+(p==='adept'?2*Math.max(X.wc,X.wm):.2),0)+(S.twice>0?plainBest:0)+bonus;
+  let best=null;
+  const rest=sp.slice(0,7);
+  (function go(S,left,first,bonus){
+    if(!left.length){const v=score(S,bonus);if(!best||v>best.v)best={v,first,S};return}
+    const seen={};
+    for(let j=0;j<left.length;j++){
+      const k=hand[left[j]];if(seen[k])continue;seen[k]=1;
+      const N={...S,cnt:{...S.cnt},pending:S.pending.slice()},d0=N.draws;
+      lsPlayS(N,k);
+      go(N,left.filter((_,x)=>x!==j),first<0?left[j]:first,bonus+(N.draws>d0?.01*left.length:0));
+    }
+  })(start,rest,-1,0);
+  const S=best.S;
+  for(const i of pl){const d=LSC[hand[i]];S.coin+=d.c||0;S.might+=d.m||0}
+  if(S.twice>0&&pl.length){const d=LSC[hand[pl[0]]];S.coin+=d.c||0;S.might+=d.m||0}
+  return {first:best.first>=0?best.first:pl.length?pl[0]:0,S};
+}
+// Coins and might a hand should make, counting expected draws.
+function lsYield(st,hand,X){
+  const S=lsBestOrder(lsFresh(),hand,X).S,ad=S.pending.filter(p=>p==='adept').length;
+  return {c:S.coin+S.draws*X.avgC+ad,m:S.might+S.draws*X.avgM+ad,disc:S.disc,loot:S.loot};
+}
+const lsAvg=X=>({c:X.avgC*5+.5,m:X.avgM*5+.5});
+const lsLam=i=>LS_TUNE.lam&&LS_TUNE.lam[i]!=null?LS_TUNE.lam[i]:.7;
+
+function lsBotPick(st,me){
+  const o=st.offer,P=st.players[me],O=st.players[1-me];
+  if(LS_TUNE.pick&&LS_TUNE.pick[me]==='rand')return rnd(2);
+  const X=lsCtx(st,me,lsPersona(st,me)),XO=lsCtx(st,1-me),y=lsYield(st,P.hand,X),oa=lsAvg(XO);
+  const seen=o.hid<0||lsPeek(st,me),wasted=me===1&&st.round>=LS_ROUNDS;
+  const mine=P.reserve.map(k=>({k,s:'o'})),opt={disc:y.disc,loot:y.loot},lam=lsLam(me);
+  const pool=Object.entries(LS_AGES[o.age]);
+  const val=[0,1].map(p=>{
+    const vis=[],other=[];
+    o.cards.forEach((k,i)=>{if(o.assign[i]===p){if(seen||i!==o.hid)vis.push({k,s:'p'})}else if(seen||i!==o.hid)other.push({k,s:'o'})});
+    // If I use nothing from the pile, the cutter gets it back along with the other one.
+    const net=pile=>{
+      const pl=lsPlan(pile.concat(mine),y.c,y.m,X,opt);
+      const unused=pl.took?[]:pile.filter(e=>!LSC[e.k].threat);
+      if(lsTax(st))return pl.v-(wasted?0:unused.length+lam*lsPlan(other,oa.c,oa.m,XO).v);
+      const left=other.concat(unused.map(e=>({k:e.k,s:'o'})));
+      return pl.v-(wasted?0:lam*lsPlan(left,oa.c,oa.m,XO).v);
+    };
+    if(seen||o.assign[o.hid]!==p)return net(vis);
+    let s=0,w=0;
+    for(const [k,n] of pool){s+=n*net(vis.concat({k,s:'p'}));w+=n}
+    return s/w;
+  });
+  return val[1]>val[0]?1:0;
+}
+function lsBotCut(st,me){
+  const c=st.cut,n=c.cards.length,P=st.players[me],O=st.players[1-me],full=(1<<n)-1;
+  if(n<2){c.assign=c.cards.map(()=>0);c.hid=-1;return}
+  if(LS_TUNE.cut&&LS_TUNE.cut[me]==='rand'){
+    do{c.assign=c.cards.map(()=>rnd(2))}while(!c.assign.includes(0)||!c.assign.includes(1));
+    c.hid=rnd(n);return;
+  }
+  const X=lsCtx(st,me,lsPersona(st,me)),XO=lsCtx(st,1-me),y=lsYield(st,P.hand,X),oa=lsAvg(XO);
+  const wasted=lsLastCut(st),oppSees=lsScore(st,1-me)<lsScore(st,me),lam=lsLam(me);
+  const theirs=O.reserve.map(k=>({k,s:'o'})),ownShop=(mask,s)=>c.cards.map((k,i)=>mask>>i&1?{k,s:s||'o',i}:null).filter(Boolean);
+  const oppMemo={},myMemo={};
+  let threats=0;
+  c.cards.forEach((k,i)=>{if(LSC[k].threat)threats|=1<<i});
+  // What the opponent would make of a pile on top of what they already hold, and what comes back to me if they use none of it.
+  const oppPlan=mask=>{
+    if(oppMemo[mask])return oppMemo[mask];
+    const p=lsPlan(ownShop(mask,'p').concat(theirs),oa.c,oa.m,XO);
+    return oppMemo[mask]={v:p.v,back:p.took?0:mask&~threats};
+  };
+  const myPlan=mask=>myMemo[mask]!==undefined?myMemo[mask]:(myMemo[mask]=lsPlan(ownShop(mask),y.c,y.m,X,{disc:y.disc,loot:y.loot}).v);
+  // What a face-down card is worth to the opponent before they know what it is.
+  let ps=0,pw=0;
+  for(const [k,nn] of Object.entries(LS_AGES[c.age])){
+    const d=LSC[k];
+    ps+=nn*(d.need?(d.need<=oa.m?d.pts:-(d.threat||0)):d.cost<=oa.c?lsWorth(k,XO)*.5:0);pw+=nn;
+  }
+  const prior=ps/pw;
+  let best=null;
+  for(let mask=2;mask<full;mask+=2){
+    const piles=[full^mask,mask],real=piles.map(oppPlan);
+    const cnt=b=>{let n=0;for(;b;b&=b-1)n++;return n};
+    const out=[0,1].map(k=>wasted?-lam*real[k].v:lsTax(st)?myPlan(piles[1-k])+cnt(real[k].back)-lam*real[k].v:myPlan(piles[1-k]|real[k].back)-lam*real[k].v);
+    for(let h=0;h<n;h++){
+      const hp=mask>>h&1;
+      const seen=[0,1].map(k=>!oppSees&&k===hp?oppPlan(piles[k]&~(1<<h)).v+prior:real[k].v);
+      const p=1/(1+Math.exp(-(seen[1]-seen[0])/.7));
+      const s=(1-p)*out[0]+p*out[1]+rnd(100)/400;
+      if(!best||s>best.s)best={s,mask,h};
+    }
+  }
+  c.assign=c.cards.map((_,i)=>best.mask>>i&1);c.hid=best.h;
+}
+
+// ---------- view helpers ----------
+const lsCard=(k,o={})=>cardHTML(LSC[k],{...o,foot:o.foot||(LSC[k].threat?`Threat ${LSC[k].threat}`:null)});
+const lsRow=(label,html,cls)=>`<div class="cd-sec ${cls||''}"><div class="sub">${label}</div><div class="line">${html}</div></div>`;
+function lsTrack(st){
+  const a=lsAgeOf(st.round);
+  return `<div class="ls-track" aria-label="${LS_AGE_NAME[a]}, round ${st.round} of ${LS_ROUNDS}">${[0,1,2].map(g=>{
+    const from=g?LS_AGE_END[g-1]+1:1;let pips='';
+    for(let r=from;r<=LS_AGE_END[g];r++)pips+=`<i class="${r<st.round?'done':r===st.round?'now':''}"></i>`;
+    return `<span class="ls-age${g===a?' on':''}"><b>${LS_AGE_NAME[g]}</b>${pips}</span>`;
+  }).join('')}</div>`;
+}
+// o: {edit, pick, seeHid, names}
+function lsPilesHTML(c,o){
+  return `<div class="piles">${[0,1].map(p=>{
+    const idx=c.cards.map((_,i)=>i).filter(i=>c.assign[i]===p);
+    const cards=idx.map((i,j)=>{
+      const k=c.cards[i],hid=c.hid===i,st=`--i:${j+p*3}`,deal=FX.deal?' deal':'';
+      if(hid&&!o.seeHid)return `<div class="card back sm ls-down${deal}" style="${st}" title="Face-down card"><span>?</span></div>`;
+      const card=lsCard(k,{btn:o.edit,cls:`sm${deal}${o.edit?' movable':''}${hid?' ls-hid':''}`,style:st,badge:hid?'hidden':null,
+        attrs:o.edit?`data-a="lsToggle" data-i="${i}" aria-label="Move ${LSC[k].n} to pile ${'BA'[p]}"`:''});
+      return o.edit?`<div class="ls-slot">${card}<button class="btn small ls-hide${hid?' on':''}" data-a="lsHide" data-i="${i}" aria-pressed="${hid}" aria-label="Place ${LSC[k].n} face down">${hid?'Face down':'Hide'}</button></div>`:card;
+    }).join('');
+    return `<div class="pile p${'AB'[p]}">
+      <div class="pile-h"><span class="pile-name">Pile ${'AB'[p]}</span><span class="chip">${lsPl(idx.length,'card')}</span></div>
+      <div class="pile-cards">${cards||'<p class="empty">Tap cards to move them here</p>'}</div>
+      ${o.pick?`<button class="btn primary" data-a="lsPick" data-i="${p}">Take pile ${'AB'[p]}</button>`:''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+const GAME={
+  key:'lions-share',title:'Lion’s Share',
+  hook:'A deckbuilder where nobody gets lucky in the market. You cut every reveal into two piles and hide one card. Your opponent takes a pile, and you shop from the other.',
+  turn:['Pick one of the two piles your opponent cut. One of its cards may be face down until you take it.',
+    'Play your hand one card at a time to make coins and might. Buy cards and defeat foes from your shop.',
+    'Reveal 5 market cards, split them into two piles for your opponent, and place one card face down. The pile they leave is yours next turn.'],
+  watch:'Do you ever agonise over a cut or a pick? Does the face-down card get used to bluff, and does it work? Do Guild, Blade and Mystic decks all feel winnable? Is 14 rounds the right length?',
+  rules:[
+    'You each have your own deck: 8 Coppers (+1 coin) and 2 Militia (+1 might) to start. You draw 5 cards each turn. Coins buy cards; might defeats foes for points.',
+    'There is no shared market row. At the end of your turn you reveal 5 market cards and split them into two piles of at least one card each. One card of your choice goes face down.',
+    'Your opponent picks one pile to shop from on their turn. The pile they leave is yours to shop from on your next turn, so cut it so you are happy either way.',
+    'No blocking for free: if you buy or defeat nothing from the pile you took, your opponent scores 1 point per card in it (or, with the title-screen variant, gets the pile to shop from too). Otherwise, cards nobody buys are gone.',
+    'Underdog: if you have fewer points than your opponent when you pick, you see the face-down card first.',
+    'Threat foes are dangerous to hold. If one is still in your shop when your turn ends, your opponent gets the points shown.',
+    'Follow-up bonuses trigger when the card you played just before is the same faction (Guild, Blade or Mystic). Play order matters.',
+    'Nothing else is for sale: every card you add comes from a pile. Once per turn each you can also use Tribute (pay 4 coins for 1 point) and Patrol (spend 3 might for 1 point).',
+    'Bought cards go to your discard pile, which is shuffled into a new deck when your deck runs out. Banish removes a card from your deck for good.',
+    `The market moves through three ages: ${LS_AGE_NAME[0]} (rounds 1–${LS_AGE_END[0]}) is cheap cards and small foes, ${LS_AGE_NAME[1]} (rounds ${LS_AGE_END[0]+1}–${LS_AGE_END[1]}) is the strong cards, ${LS_AGE_NAME[2]} (rounds ${LS_AGE_END[1]+1}–${LS_ROUNDS}) is where most of the points are.`,
+    `The game ends after round ${LS_ROUNDS}. Points from foes, Tribute and Patrol plus points printed on your cards; most wins.`,
+  ],
+  options:[{key:'unused',label:'If you use nothing from your pile',choices:[['tax','Opponent scores 1 per card'],['bounce','Opponent gets the pile']]}],
+  tag:st=>LS_AGE_NAME[lsAgeOf(st.round)],
+  maxRounds:LS_ROUNDS,
+  score:lsScore,
+  setup(o){
+    const unused=o&&o.unused==='bounce'?'bounce':'tax';
+    const mk=[0,1,2].map(lsDeck);
+    const players=[0,1].map(()=>{const p={deck:shuffle([...rep('copper',8),...rep('militia',2)]),discard:[],hand:[],pts:0,reserve:[]};p.hand=draw(p,5);return p});
+    const cards=mk[0].splice(mk[0].length-LS_CUT,LS_CUT);
+    return {turn:0,round:1,unused,players,mk,offer:{cards,assign:shuffle([0,0,1,1,1]),hid:-1,age:0},phase:'choose',
+      ...lsFresh(),shop:[],played:[],cut:null,
+      log:['The opening cut was made at random. Seat 2 gets the pile seat 1 leaves.'],over:false,endTriggered:false};
+  },
+  view(st,ctx){
+    const S=ctx.seat,A=st.turn,L=ctx.label,act=ctx.canAct,P=st.players,me=P[S],ap=P[A];
+    const info=p=>`Deck ${p.deck.length} · discard ${p.discard.length}`;
+    const v={oppInfo:`${info(P[1-S])} · hand ${P[1-S].hand.length}`,meInfo:info(me),arena:'',hand:'',actions:'',prompt:''};
+    if(st.over)return v;
+    const track=lsTrack(st);
+    const peekHand=(label,hand)=>`<div class="peek-label">${label}</div>`+handHTML(hand.map(k=>({def:LSC[k],o:{cls:'peek'}})));
+    const minis=(label,list)=>list.length?lsRow(label,list.map((k,i)=>lsCard(k,{cls:'mini',style:`--i:${i}`})).join(''),'ls-wait'):'';
+    if(st.phase==='choose'){
+      const o=st.offer,peek=o.hid>=0&&lsPeek(st,A),wasted=A===1&&st.round>=LS_ROUNDS;
+      v.prompt=act?`${o.hid<0?'The opening cut was random.':`${L(1-A)} cut the market.`} Take a pile${wasted?'':`; ${L(1-A)} gets the other`}.`:`${L(A)} is picking a pile.`;
+      v.arena=track+lsPilesHTML(o,{pick:act,seeHid:S!==A||peek})
+        +(act&&o.hid>=0?`<p class="ls-note">${peek?'You’re behind on points, so you can see the face-down card.':'One card is face down. You’ll see it if you take that pile.'}</p>`:'')
+        +(act?minis('Already in your shop',ap.reserve):'');
+      v.hand=S===A?peekHand('Your hand',me.hand):peekHand('Your next hand',me.hand);
+      return v;
+    }
+    if(st.phase==='cut'){
+      const c=st.cut,wasted=lsLastCut(st);
+      v.prompt=act?(wasted?`Final cut. ${L(1-A)} shops from one pile and the other is lost, so leave them as little as you can.`
+        :`Cut the market for ${L(1-A)}. They take one pile; you shop from the other next turn.`):`${L(A)} is cutting the market.`;
+      if(act){
+        const X=lsCtx(st,A),y=lsYield(st,me.hand,X),oa=lsCtx(st,1-A);
+        v.arena=track+lsPilesHTML(c,{edit:true,seeHid:true})
+          +`<p class="ls-note">Tap a card to move it. Choose one to place face down${lsScore(st,1-A)<lsScore(st,A)?`, though ${L(1-A)} is behind and will see it`:''}.</p>`
+          +minis(`Already in ${L(1-A)}’s shop`,P[1-A].reserve);
+        v.actions=`<span class="hint">Your next hand ≈ ${Math.round(y.c)} coins, ${Math.round(y.m)} might · ${L(1-A)} averages ${(oa.avgC*5).toFixed(1)} / ${(oa.avgM*5).toFixed(1)}</span><button class="btn primary big" data-a="lsSend">Offer cut</button>`;
+      }else v.arena=track;
+      v.hand=peekHand('Your next hand',me.hand);
+      return v;
+    }
+    // main phase
+    const pend=st.pending[0],banish=act&&pend==='banish';
+    const res=`<div class="res"><span class="r coin"><b>${st.coin}</b> coins</span><span class="r mi"><b>${st.might}</b> might</span></div>`
+      +[st.twice?'<span class="chip gold">next card is played twice</span>':'',st.disc?`<span class="chip gold">next buy costs ${st.disc} less</span>`:'',
+        st.top?'<span class="chip gold">next buy goes on top of your deck</span>':'',st.loot?`<span class="chip gold">+${lsPl(st.loot,'coin')} per foe defeated</span>`:'',
+        st.extra?`<span class="chip gold">reveal ${LS_CUT+st.extra} when you cut</span>`:''].filter(Boolean).join('');
+    const can=k=>{
+      if(!act||pend)return false;const d=LSC[k];
+      if(d.need)return st.might>=d.need;
+      if(d.use)return !st.used.patrol&&st.might>=d.use;
+      if(d.pay)return !st.used.tribute&&st.coin>=d.pay;
+      return st.coin>=lsPrice(st,k);
+    };
+    const lastTurn=A===1&&st.round>=LS_ROUNDS,mustUse=!st.took&&!lastTurn&&st.shop.some(e=>e.s==='p');
+    const shopCard=(e,i)=>{const d=LSC[e.k],ok=can(e.k),cut=!d.need&&st.disc&&ok;
+      return lsCard(e.k,{btn:true,disabled:!ok,cls:`sm${ok?' glow':''}${e.s==='p'&&!st.took&&!lastTurn?' ls-ret':''}`,style:`--i:${i}`,badge:cut?`now ${lsPrice(st,e.k)}`:null,
+        attrs:`data-a="lsGet" data-i="s${i}" aria-label="${d.need?'Defeat':'Buy'} ${d.n}"`})};
+    const alwaysCard=(k,i)=>{const d=LSC[k],ok=can(k),once=d.gain,spent=once&&st.used[k];
+      return lsCard(k,{btn:true,disabled:!ok,cls:`sm${ok?' glow':''}${spent?' gone':''}`,style:`--i:${i}`,badge:spent?'done':null,
+        attrs:`data-a="lsGet" data-i="a${k}" aria-label="${once?'Use':'Buy'} ${d.n}"`})};
+    v.arena=track+`<div class="ls-res">${res}</div>`
+      +(st.played.length?lsRow('In play',st.played.map((k,i)=>lsCard(k,{btn:banish,cls:`mini${banish?' banishable':''}`,style:`--i:${i}`,attrs:banish?`data-a="lsBanish" data-i="p${i}"`:''})).join(''),'played ls-played'):'')
+      +`<div class="cd-row">${lsRow((S===A?'Your shop':`${L(A)}’s shop`)+(mustUse?` <span class="ls-key">↩ use one of these or ${lsTax(st)?`${L(1-A)} scores ${lsPl(st.shop.filter(e=>e.s==='p'&&!LSC[e.k].threat).length,'point')}`:`they go to ${L(1-A)}`}</span>`:''),
+        st.shop.map(shopCard).join('')||'<p class="empty">Nothing left</p>','mkt')}${lsRow('Once per turn',LS_ALWAYS.map(alwaysCard).join(''),'always')}</div>`;
+    if(act){
+      if(pend==='adept'){
+        v.prompt='Adept: choose one.';
+        v.actions=`<button class="btn primary big" data-a="lsAdept" data-i="c">+2 coins</button><button class="btn primary big" data-a="lsAdept" data-i="m">+2 might</button>`;
+      }else if(banish){
+        v.prompt='Banish a card from your hand or play area, or skip.';
+        v.actions=`<button class="btn big" data-a="lsBanish" data-i="skip">Skip</button>`;
+      }else{
+        const basics=ap.hand.some(k=>LSC[k].plain),threat=st.shop.find(e=>LSC[e.k].threat);
+        v.prompt=ap.hand.length?`Play cards in any order${st.lastF?`. Last played: ${LS_F[st.lastF]}`:''}.`
+          :threat?`Buy and fight. ${LSC[threat.k].n} will cost you ${lsPl(LSC[threat.k].threat,'point')} if you leave it.`:'Buy cards and defeat foes, then end your turn.';
+        v.actions=`${basics?`<button class="btn" data-a="lsBasics">Play basics</button>`:''}<button class="btn primary big" data-a="lsEnd">${A===1&&st.round>=LS_ROUNDS?'Finish game':'End turn'}</button>`;
+      }
+      const ready=k=>{const d=LSC[k];return (d.f&&d.f===st.lastF&&/Follow-up/.test(d.txt))||(k==='vanguard'&&st.n===0)||(st.twice>0&&k!=='mimic')};
+      v.hand=handHTML(ap.hand.map((k,i)=>({def:LSC[k],o:banish?{btn:true,cls:'banishable',attrs:`data-a="lsBanish" data-i="h${i}"`}
+        :{btn:true,disabled:!!pend,cls:ready(k)?'glow':'',attrs:`data-a="lsPlay" data-i="${i}"`}})))||'<p class="empty">Hand played.</p>';
+    }else{
+      v.prompt=`${L(A)} is playing their turn.`;
+      v.hand=peekHand('Your next hand',me.hand);
+    }
+    return v;
+  },
+  on:{
+    lsToggle(st,i){const c=st.cut;if(!c)return;c.assign[+i]=1-c.assign[+i];sfx('tap')},
+    lsHide(st,i){const c=st.cut;if(!c)return;c.hid=c.hid===+i?-1:+i;sfx('tap')},
+    lsPick(st,p,ctx){
+      if(st.phase!=='choose')return;
+      p=+p;const me=st.turn,P=st.players[me],o=st.offer,L=ctx.label;
+      const pile=o.cards.filter((_,i)=>o.assign[i]===p),rest=o.cards.filter((_,i)=>o.assign[i]!==p);
+      const wasted=me===1&&st.round>=LS_ROUNDS,names=a=>a.map(k=>LSC[k].n).join(', ')||'nothing';
+      st.shop=pile.map(k=>({k,s:'p'})).concat(P.reserve.map(k=>({k,s:'o'})));P.reserve=[];
+      if(!wasted)st.players[1-me].reserve.push(...rest);
+      st.offer=null;st.phase='main';st.took=false;
+      st.log.push(`${L(me)} took pile ${'AB'[p]} (${names(pile)}). ${wasted?'Lost':`Left for ${L(1-me)}`}: ${names(rest)}.`);
+      if(o.hid>=0&&o.assign[o.hid]===p&&LSC[o.cards[o.hid]].threat)pop(me,'Ambush!','bad');
+      FX.deal=true;sfx('card');
+    },
+    lsPlay(st,i){
+      if(st.pending.length||st.phase!=='main')return;
+      const P=st.players[st.turn],k=P.hand.splice(+i,1)[0];if(!k)return;
+      st.played.push(k);
+      const r=lsPlayS(st,k);
+      if(st.draws){const got=draw(P,st.draws);P.hand.push(...got);if(got.length)FX.deal=true}
+      st.draws=0;
+      if(r.tw)pop(st.turn,'Twice!','good');else if(r.fu)pop(st.turn,'Follow-up!','good');
+      sfx(LSC[k].c?'coin':'card');
+    },
+    lsBasics(st){
+      if(st.pending.length||st.phase!=='main')return;
+      const P=st.players[st.turn];
+      for(let i=P.hand.length-1;i>=0;i--)if(LSC[P.hand[i]].plain){
+        const k=P.hand.splice(i,1)[0];st.played.push(k);lsPlayS(st,k);
+      }
+      sfx('coin');
+    },
+    lsAdept(st,w){if(st.pending[0]!=='adept')return;st.pending.shift();if(w==='c')st.coin+=2;else st.might+=2;sfx('coin')},
+    lsBanish(st,w,ctx){
+      if(st.pending[0]!=='banish')return;
+      const P=st.players[st.turn];st.pending.shift();
+      if(w==='skip')return sfx('tap');
+      const k=w[0]==='h'?P.hand.splice(+w.slice(1),1)[0]:st.played.splice(+w.slice(1),1)[0];
+      if(!k)return;
+      st.log.push(`${ctx.label(st.turn)} banished ${LSC[k].n}.`);sfx('bad');
+    },
+    lsGet(st,w,ctx){
+      if(st.pending.length||st.phase!=='main')return;
+      const me=st.turn,P=st.players[me],always=w[0]==='a',idx=+w.slice(1),e=always?null:st.shop[idx],k=always?w.slice(1):e&&e.k,d=LSC[k],L=ctx.label;
+      if(!d||(always&&!LS_ALWAYS.includes(k)))return;
+      if(d.gain){
+        const key=d.pay?'coin':'might',amt=d.pay||d.use;
+        if(st.used[k]||st[key]<amt)return;
+        st[key]-=amt;st.used[k]=true;lsGain(st,me,d.gain);sfx('score');
+        st.log.push(`${L(me)} used ${d.n} (+${d.gain}).`);
+        return;
+      }
+      if(d.need){
+        if(st.might<d.need)return;
+        st.might-=d.need;lsGain(st,me,d.pts);sfx('score');
+        st.coin+=st.loot+(d.gc||0);
+        if(k==='brigand')st.pending.push('banish');
+        if(k==='troll'){P.hand.push(...draw(P,1));FX.deal=true}
+        st.log.push(`${L(me)} defeated ${d.n} (+${d.pts}).`);
+      }else{
+        const price=lsPrice(st,k);
+        if(st.coin<price)return;
+        st.coin-=price;st.disc=0;
+        if(st.top){P.deck.push(k);st.top=false}else P.discard.push(k);
+        sfx('card');st.log.push(`${L(me)} bought ${d.n}.`);
+      }
+      if(!always){if(e.s==='p')st.took=true;st.shop.splice(idx,1)}
+    },
+    lsEnd(st,_,ctx){
+      if(st.pending.length||st.phase!=='main')return;
+      const me=st.turn,P=st.players[me],L=ctx.label;
+      for(const e of st.shop){
+        const d=LSC[e.k];
+        if(d.threat){lsGain(st,1-me,d.threat);pop(me,`${d.n} got through`,'bad');st.log.push(`${L(me)} left ${d.n} undefeated: +${d.threat} to ${L(1-me)}.`)}
+      }
+      const last=me===1&&st.round>=LS_ROUNDS,back=st.took?[]:st.shop.filter(e=>e.s==='p'&&!LSC[e.k].threat).map(e=>e.k);
+      if(back.length&&!last&&lsTax(st)){lsGain(st,1-me,back.length);st.log.push(`${L(me)} used nothing from the pile: +${back.length} to ${L(1-me)}.`)}
+      else if(back.length&&!last){st.players[1-me].reserve.push(...back);st.log.push(`${L(me)} used nothing from the pile: ${back.map(k=>LSC[k].n).join(', ')} went to ${L(1-me)}.`)}
+      P.discard.push(...P.hand,...st.played);P.hand=[];
+      const extra=st.extra;
+      Object.assign(st,lsFresh(),{shop:[],played:[]});
+      if(last){sfx('card');return passTurn(st,LS_ROUNDS)}
+      P.hand=draw(P,5);
+      const r=lsReveal(st,LS_CUT+extra),n=r.cards.length;
+      st.cut={cards:r.cards,assign:r.cards.map((_,i)=>i<Math.ceil(n/2)?0:1),hid:-1,age:r.age};
+      st.phase='cut';FX.deal=true;sfx('card');
+    },
+    lsSend(st){
+      const c=st.cut;if(st.phase!=='cut'||!c)return;
+      if(c.cards.length>1){
+        if(!c.assign.includes(0)||!c.assign.includes(1))return toast('Each pile needs at least one card.');
+        if(c.hid<0)return toast('Choose one card to place face down.');
+      }
+      st.offer=c;st.cut=null;st.phase='choose';
+      sfx('tap');
+      return passTurn(st,LS_ROUNDS);
+    },
+  },
+  // One bot decision per call; returns 'commit' when its turn is over.
+  bot(st,ctx){
+    const on=GAME.on,me=st.turn,P=st.players[me];
+    if(st.phase==='choose')return on.lsPick(st,lsBotPick(st,me),ctx);
+    if(st.phase==='cut'){
+      // Show the cut for a beat before sending it.
+      if(st.botCut){delete st.botCut;return on.lsSend(st,null,ctx)}
+      lsBotCut(st,me);st.botCut=true;sfx('tap');return;
+    }
+    const X=lsCtx(st,me,lsPersona(st,me));
+    const plan=(c,m)=>lsPlan(st.shop,c,m,X,{disc:st.disc,loot:st.loot,used:st.used});
+    if(st.pending[0]==='adept'){
+      const y=P.hand.length?lsBestOrder({...st,coin:0,might:0},P.hand,X).S:{coin:0,might:0};
+      const a=plan(st.coin+2+y.coin,st.might+y.might).v,b=plan(st.coin+y.coin,st.might+2+y.might).v;
+      return on.lsAdept(st,a>b||(a===b&&X.wc>=X.wm)?'c':'m');
+    }
+    if(st.pending[0]==='banish'){
+      let w='skip';
+      if(X.T>1&&X.n>7){
+        const pc=st.played.indexOf('copper'),pm=st.played.indexOf('militia');
+        const dropM=pm>=0&&(pc<0||X.wm*(X.avgM*5<2.5?.8:1.1)<X.wc);
+        if(dropM)w='p'+pm;else if(pc>=0)w='p'+pc;
+        else if(X.T>4&&P.hand.includes('copper'))w='h'+P.hand.indexOf('copper');
+      }
+      return on.lsBanish(st,w,ctx);
+    }
+    if(P.hand.length){
+      // Starters go down before a Fence so it can banish one for free.
+      const pl=P.hand.findIndex(k=>LSC[k].plain);
+      if(pl>=0&&!st.twice&&P.hand.includes('fence')&&!(st.n===0&&P.hand.includes('vanguard')))return on.lsPlay(st,pl);
+      return on.lsPlay(st,lsBestOrder(st,P.hand,X).first);
+    }
+    let best=plan(st.coin,st.might);
+    if(!st.took&&!best.took&&!(me===1&&st.round>=LS_ROUNDS)&&st.shop.some(e=>e.s==='p')){
+      // Nothing from the pile is worth it on its own. Is it worth a purchase to keep the pile from going back?
+      const alt=lsPlan(st.shop,st.coin,st.might,X,{disc:st.disc,loot:st.loot,used:st.used,must:true});
+      if(alt.took){
+        const XO=lsCtx(st,1-me),oa=lsAvg(XO),O=st.players[1-me],has=O.reserve.map(k=>({k,s:'o'}));
+        const back=st.shop.filter(e=>e.s==='p'&&!LSC[e.k].threat).map(e=>({k:e.k,s:'o'}));
+        const deny=lsTax(st)?back.length/lsLam(me):lsPlan(has.concat(back),oa.c,oa.m,XO).v-lsPlan(has,oa.c,oa.m,XO).v;
+        if(alt.v+lsLam(me)*deny>best.v)best=alt;
+      }
+    }
+    const set=best.set;
+    if(set.length){
+      // Fight first (Looter pays out), then the dearest card (discounts and top-decking land on it).
+      const it=set.find(x=>x.foe)||set.find(x=>x.k==='patrol')||set.filter(x=>x.card).sort((a,b)=>b.cost-a.cost)[0]||set[0];
+      const sig=st.coin+':'+st.might+':'+st.shop.length;
+      on.lsGet(st,it.i>=0?'s'+it.i:'a'+it.k,ctx);
+      if(sig!==st.coin+':'+st.might+':'+st.shop.length)return;
+    }
+    return on.lsEnd(st,null,ctx);
+  },
+};
+
+// =====================================================================
+// Shell: title screen, game table, overlays, storage, bot and hotseat turns.
+// Local games (vs bot, pass and play) live in this browser. Online games need
+// the Claude artifact runtime (window.claude) and are shared through its db.
+// =====================================================================
+const HUB='https://dyrota.github.io/prototypes/';
+const $app=document.getElementById('app');
+const LS='proto-'+GAME.key+'-games';
+const ICON={
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 17h.01"/></svg>',
+  on:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9a4 4 0 0 1 0 6M19.5 6a8 8 0 0 1 0 12"/></svg>',
+  off:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>',
+};
+let DB=null,USER=null,ME=null,ONLINE=false,CANWRITE=true;
+let LOCAL={},REMOTE={},names={};
+let view={screen:'title',id:null},work=null,workKey=null,modal=null,confirmDel=null,handoff=null,botTimer=null,dismissed=null;
+try{MUTED=localStorage.getItem('proto-muted')==='1'}catch(e){}
+// Rule variants a game offers on its title screen (GAME.options); new games start with the current picks.
+let OPTS={};
+for(const o of GAME.options||[])OPTS[o.key]=o.choices[0][0];
+try{Object.assign(OPTS,JSON.parse(localStorage.getItem(LS+'-opts')||'{}'))}catch(e){}
+
+function lsLoad(){try{return JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){return {}}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify(LOCAL))}catch(e){}}
+const getGame=id=>LOCAL[id]||REMOTE[id];
+const isLocal=g=>g.mode==='local';
+const vsBot=g=>isLocal(g)&&g.seats.includes('bot');
+const isHot=g=>isLocal(g)&&!vsBot(g);
+
+function seatLabel(g,i){
+  const s=g.seats[i];
+  if(isLocal(g))return s==='bot'?'Bot':vsBot(g)?'You':`Seat ${i+1}`;
+  if(!s)return 'Open seat';
+  if(s===ME)return g.seats[0]===g.seats[1]?`Seat ${i+1}`:'You';
+  return clean(names[s]||'Opponent');
+}
+function canActIn(g,st){
+  if(st.over||g.status==='done')return false;
+  const s=g.seats[st.turn];
+  return isLocal(g)?s==='h':CANWRITE&&s===ME;
+}
+// Which seat sits at the bottom of the table.
+function perspective(g,st){
+  if(vsBot(g))return g.seats.indexOf('h');
+  if(isHot(g)||g.seats[0]===g.seats[1])return st.turn;
+  const i=g.seats.indexOf(ME);return i<0?0:i;
+}
+function statusFor(g){
+  const st=g.state;
+  if(st.over||g.status==='done')return {cls:'done',txt:'Finished'};
+  if(g.seats[st.turn]==='bot')return {cls:'wait',txt:'Bot to play'};
+  if(canActIn(g,st))return {cls:'go',txt:isHot(g)?`Seat ${st.turn+1} to play`:'Your turn'};
+  if(!g.seats[1]&&st.turn===1)return {cls:'wait',txt:'Waiting for an opponent'};
+  return {cls:'wait',txt:`${seatLabel(g,st.turn)} to play`};
+}
+const modeName=g=>isLocal(g)?(vsBot(g)?'vs bot':'pass and play'):'online';
+const initial=s=>s==='Bot'?'B':s==='You'?'Y':s.startsWith('Seat ')?s.slice(5):(s[0]||'?').toUpperCase();
+
+function render(){
+  if(view.screen==='game'&&getGame(view.id))renderGame();
+  else{view={screen:'title',id:null};renderTitle()}
+  const ov=modalHTML();
+  if(ov)$app.insertAdjacentHTML('beforeend',ov);
+  flushFX();
+}
+
+// ---------- title screen ----------
+function myGames(){
+  const mine=[],open=[];
+  for(const [id,g] of Object.entries(LOCAL))mine.push([id,g]);
+  for(const [id,g] of Object.entries(REMOTE)){
+    if(g.seats.includes(ME))mine.push([id,g]);
+    else if(!g.seats[1]&&g.status!=='done')open.push([id,g]);
+  }
+  const rank=g=>({go:0,wait:1,done:2})[statusFor(g).cls];
+  mine.sort((a,b)=>rank(a[1])-rank(b[1])||(b[1].updatedAt||0)-(a[1].updatedAt||0));
+  return {mine,open};
+}
+function renderTitle(){
+  const {mine,open}=myGames();
+  const cont=mine.find(([,g])=>statusFor(g).cls!=='done');
+  const yourTurn=mine.filter(([,g])=>!isLocal(g)&&statusFor(g).cls==='go').length;
+  $app.innerHTML=`<div class="title">
+    <div class="deco" aria-hidden="true"><div class="card back d1"></div><div class="card back d2"></div><div class="card back d3"></div></div>
+    <div class="title-inner">
+      <h1 class="logo">${GAME.title}</h1>
+      <p class="tag">${GAME.hook}</p>
+      ${(GAME.options||[]).map(o=>`<div class="opt"><span class="sub">${o.label}</span><div class="seg" role="group" aria-label="${o.label}">${o.choices.map(([v,l])=>`<button class="btn small${OPTS[o.key]===v?' on':''}" aria-pressed="${OPTS[o.key]===v}" data-a="opt" data-i="${o.key}:${v}">${l}</button>`).join('')}</div></div>`).join('')}
+      <nav class="menu">
+        ${cont?`<button class="btn primary big" data-a="open" data-i="${cont[0]}">Continue<small>${modeName(cont[1])}${GAME.tag?' · '+GAME.tag(cont[1].state):''} · round ${cont[1].state.round} · ${GAME.score(cont[1].state,0)}–${GAME.score(cont[1].state,1)}</small></button>`:''}
+        <button class="btn ${cont?'':'primary '}big" data-a="new" data-i="bot">Play vs bot</button>
+        <button class="btn big" data-a="new" data-i="hot">Pass and play</button>
+        ${ONLINE&&CANWRITE?`<button class="btn big" data-a="new" data-i="online">New online game</button>`:''}
+        <div class="menu-row"><button class="btn" data-a="modal" data-i="rules">How to play</button><button class="btn" data-a="modal" data-i="games">Games${mine.length?` (${mine.length})`:''}</button></div>
+      </nav>
+      ${yourTurn?`<p class="notice">It’s your turn in ${yourTurn} online game${yourTurn===1?'':'s'}.</p>`:''}
+      ${open.length?`<p class="notice">${open.length} player${open.length===1?' is':'s are'} waiting for an opponent. <button class="linkbtn" data-a="modal" data-i="games">Join</button></p>`:''}
+      <p class="foot">${ONLINE?'Online games are shared through this page. Friends need Contributor access to join.':'Games are saved in this browser.'} · <a href="${HUB}" target="_top">All prototypes</a></p>
+    </div></div>`;
+}
+
+// ---------- game table ----------
+function renderGame(){
+  const g=getGame(view.id),key=view.id+':'+(g.v||0);
+  if(workKey!==key){work=clone(g.state);workKey=key;FX.deal=true;FX.prompt=true}
+  const st=work,S=perspective(g,st),canAct=canActIn(g,st);
+  const ctx={seat:S,canAct,hot:isHot(g),label:i=>seatLabel(g,i)};
+  const v=GAME.view(st,ctx);
+  if(!v.prompt){
+    if(st.over)v.prompt='Game over.';
+    else if(!isLocal(g)&&!g.seats[1])v.prompt=g.seats[0]===ME?'Waiting for someone to join.':'Seat 2 is open.';
+    else v.prompt=`${ctx.label(st.turn)} to play.`;
+  }
+  if(!canAct&&!st.over&&!isLocal(g)&&g.seats[st.turn]!==ME)v.prompt+=` <span class="muted">Waiting for ${ctx.label(st.turn)}.</span>`;
+  const plate=(i,cls)=>{const name=ctx.label(i);
+    return `<div class="plate ${cls}${st.turn===i&&!st.over?' active':''}" data-seat="${i}"><span class="avatar">${initial(name)}</span>
+      <div class="pl-body"><div class="pl-name">${name}</div><div class="pl-info">${i===S?v.meInfo:v.oppInfo}</div></div>
+      <div class="pl-score"><b>${GAME.score(st,i)}</b><span>pts</span></div></div>`};
+  const covered=handoff===view.id&&!st.over;
+  const joinBtn=!isLocal(g)&&!g.seats[1]&&CANWRITE?(g.seats[0]===ME?`<button class="btn small" data-a="solo" data-i="${view.id}">Take seat 2 myself</button>`:`<button class="btn primary" data-a="join" data-i="${view.id}">Join as seat 2</button>`):'';
+  $app.innerHTML=`<div class="stage">
+    <header class="hud">
+      <button class="icon" data-a="menu" aria-label="Back to menu">${ICON.menu}</button>
+      ${plate(1-S,'opp')}
+      <div class="hud-r"><span class="round">${GAME.tag?GAME.tag(st)+' · ':''}Round ${st.round}/${GAME.maxRounds}</span>
+        <button class="icon" data-a="modal" data-i="rules" aria-label="How to play">${ICON.help}</button>
+        <button class="icon" data-a="mute" aria-label="${MUTED?'Turn sound on':'Turn sound off'}">${MUTED?ICON.off:ICON.on}</button></div>
+    </header>
+    <div class="prompt${FX.prompt?' new':''}">${covered?'':v.prompt}</div>
+    <main class="arena">${covered?'':v.arena}</main>
+    <div class="bottom">
+      <div class="tray">${plate(S,'me')}<div class="actions">${joinBtn}${covered?'':v.actions}${canAct&&!covered?`<button class="btn ghost small" data-a="undo">Undo turn</button>`:''}${st.over?`<button class="btn primary" data-a="rematch">Rematch</button>`:''}</div></div>
+      <div class="hand">${covered?'':v.hand}</div>
+    </div>
+  </div>`;
+  if(vsBot(g)&&g.seats[st.turn]==='bot'&&!st.over&&!botTimer)botTimer=setTimeout(botTick,FX.deal?1100:750);
+}
+
+// ---------- overlays ----------
+function modalHTML(){
+  const g=view.screen==='game'?getGame(view.id):null;
+  if(g&&handoff===view.id&&!work.over){
+    return `<div class="overlay"><div class="modal center"><div class="end-title">Seat ${work.turn+1}</div><p>Pass the device to seat ${work.turn+1}, then tap Ready.</p><button class="btn primary big" data-a="ready">Ready</button></div></div>`;
+  }
+  if(g&&work.over&&dismissed!==view.id&&!modal){
+    const a=GAME.score(work,0),b=GAME.score(work,1),S=perspective(g,work);
+    let title;
+    if(a===b)title='Draw';
+    else if(isHot(g)||g.seats[0]===g.seats[1])title=`Seat ${a>b?1:2} wins`;
+    else title=(a>b?0:1)===S?'Victory':'Defeat';
+    return `<div class="overlay"><div class="modal center end">
+      <div class="end-title">${title}</div>
+      <div class="end-scores">${[0,1].map(i=>`<div><span>${seatLabel(g,i)}</span><b>${GAME.score(work,i)} pts</b></div>`).join('')}</div>
+      <div class="row center"><button class="btn primary big" data-a="rematch">Rematch</button><button class="btn" data-a="menu">Menu</button><button class="btn ghost" data-a="dismiss">See the board</button></div></div></div>`;
+  }
+  if(modal==='rules'){
+    return `<div class="overlay" data-a="close"><div class="modal" role="dialog" aria-label="How to play">
+      <div class="spread"><h2>How to play ${GAME.title}</h2><button class="btn small" data-a="close">Close</button></div>
+      <p class="lead">${GAME.hook}</p>
+      <h3>A turn</h3><ol>${GAME.turn.map(t=>`<li>${t}</li>`).join('')}</ol>
+      <h3>Rules</h3><ul>${GAME.rules.map(r=>`<li>${r}</li>`).join('')}</ul>
+      <h3>Test for</h3><p class="watch">${GAME.watch}</p>
+      ${g?`<h3>Log</h3><div class="log">${work.log.slice(-14).reverse().map(l=>`<div>${esc(l)}</div>`).join('')||'Nothing yet.'}</div>`:''}
+    </div></div>`;
+  }
+  if(modal==='games'){
+    const {mine,open}=myGames();
+    const item=([id,g],join)=>{const s=statusFor(g),st=g.state;
+      return `<div class="gitem"><div><b>${seatLabel(g,0)} ${GAME.score(st,0)} – ${GAME.score(st,1)} ${seatLabel(g,1)}</b><div class="muted">${modeName(g)} · round ${st.round}</div></div>
+        <div class="row">${join?(CANWRITE?`<button class="btn small primary" data-a="join" data-i="${id}">Join</button>`:''):`<span class="pill ${s.cls}">${s.txt}</span>`}
+        <button class="btn small" data-a="open" data-i="${id}">${join?'Watch':'Open'}</button>
+        ${!join&&(isLocal(g)||g.createdBy===ME)?`<button class="btn small ghost" data-a="del" data-i="${id}">${confirmDel===id?'Confirm':'Delete'}</button>`:''}</div></div>`};
+    return `<div class="overlay" data-a="close"><div class="modal" role="dialog" aria-label="Games">
+      <div class="spread"><h2>Games</h2><button class="btn small" data-a="close">Close</button></div>
+      ${mine.length?`<div class="glist">${mine.map(x=>item(x,false)).join('')}</div>`:'<p class="muted">No games yet.</p>'}
+      ${ONLINE?`<h3>Open seats</h3>${open.length?`<div class="glist">${open.map(x=>item(x,true)).join('')}</div>`:'<p class="muted">No one is waiting for an opponent.</p>'}
+        ${CANWRITE?`<p class="muted">Testing alone online? <button class="linkbtn" data-a="new" data-i="solo">Start a game and play both seats</button>.</p>`:''}`:''}
+    </div></div>`;
+  }
+  return '';
+}
+
+// ---------- effects ----------
+function flushFX(){
+  if(typeof document!=='undefined'&&FX.pops.length){
+    const g=getGame(view.id);
+    FX.pops.forEach((p,n)=>{
+      const el=document.querySelector(`.plate[data-seat="${p.seat}"]`)||document.querySelector('.arena');
+      if(!el)return;
+      const r=el.getBoundingClientRect(),d=document.createElement('div');
+      d.className='pop '+p.kind;d.textContent=p.text;
+      d.style.left=(r.left+r.width/2)+'px';d.style.top=(r.top+r.height/2-n*26)+'px';
+      document.body.appendChild(d);setTimeout(()=>d.remove(),1400);
+    });
+  }
+  FX.pops=[];FX.deal=false;FX.bead=false;FX.fight=false;FX.prompt=false;
+}
+
+// ---------- turns ----------
+function botTick(){
+  botTimer=null;
+  const g=getGame(view.id);
+  if(view.screen!=='game'||!g||!vsBot(g)||work.over||g.seats[work.turn]!=='bot')return;
+  const ctx={seat:work.turn,canAct:true,label:i=>seatLabel(g,i)};
+  if(GAME.bot(work,ctx)==='commit'){
+    const doc=clone(g);doc.state=clone(work);if(work.over){doc.status='done';sfx(GAME.score(work,0)===GAME.score(work,1)?'tap':'lose')}
+    saveGame(view.id,doc);
+  }else render();
+}
+async function saveGame(id,doc){
+  doc.updatedAt=Date.now();doc.v=(doc.v||0)+1;
+  if(doc.state.log.length>40)doc.state.log=doc.state.log.slice(-40);
+  if(isLocal(doc)){LOCAL[id]=doc;lsSave();render();return}
+  const prev=REMOTE[id];REMOTE[id]=doc;render();
+  try{await DB.doc('games/'+id).set(doc)}
+  catch(e){
+    if(prev)REMOTE[id]=prev;else delete REMOTE[id];workKey=null;render();
+    toast(e&&e.code==='invalid_argument'?'You can’t save here. Ask the owner for Contributor access.'
+      :e&&e.code==='quota_exceeded'?'This page is full. Delete some old games.'
+      :'Couldn’t save. Check your connection and try again.');
+  }
+}
+function newGame(kind,opts){
+  opts={...(opts||OPTS)};
+  const id=newId(),base={type:GAME.key,createdAt:Date.now(),opts,state:GAME.setup(opts)};
+  let doc;
+  if(kind==='bot')doc={...base,mode:'local',seats:['h','bot'],status:'active'};
+  else if(kind==='hot')doc={...base,mode:'local',seats:['h','h'],status:'active'};
+  else doc={...base,mode:'online',seats:[ME,kind==='solo'?ME:null],createdBy:ME,status:kind==='solo'?'active':'open'};
+  modal=null;handoff=null;dismissed=null;view={screen:'game',id};workKey=null;setHash(id);sfx('card');
+  saveGame(id,doc);window.scrollTo(0,0);
+}
+async function claimSeat(id,asSolo){
+  if(!ONLINE)return;
+  const ref=DB.doc('games/'+id);
+  try{
+    const l=await ref.acquire({holder:ME,ttlMs:5000});
+    if(!l.acquired)return toast('Someone else is joining right now. Try again in a few seconds.');
+    const snap=await ref.get(),d=snap.exists?clone(snap.data()):null;
+    if(!d||d.seats[1])return toast('That seat was just taken.');
+    if(!asSolo&&d.seats[0]===ME)return;
+    d.seats=[d.seats[0],ME];d.status='active';
+    modal=null;view={screen:'game',id};setHash(id);await saveGame(id,d);
+  }catch(e){toast('Couldn’t join that game. Try again.')}
+}
+function setHash(id){try{history.replaceState(null,'',id?'#'+id:location.pathname+location.search)}catch(e){}}
+
+const GLOBAL={
+  new:kind=>newGame(kind),
+  open:id=>{modal=null;handoff=null;view={screen:'game',id};workKey=null;setHash(id);render();window.scrollTo(0,0)},
+  menu:()=>{modal=null;handoff=null;view={screen:'title',id:null};setHash(null);render();window.scrollTo(0,0)},
+  modal:m=>{modal=m;render()},
+  close:()=>{modal=null;confirmDel=null;render()},
+  join:id=>claimSeat(id,false),
+  solo:id=>{modal=null;claimSeat(id,true)},
+  undo:()=>{workKey=null;render()},
+  ready:()=>{handoff=null;FX.deal=true;render()},
+  dismiss:()=>{dismissed=view.id;render()},
+  mute:()=>{MUTED=!MUTED;try{localStorage.setItem('proto-muted',MUTED?'1':'0')}catch(e){}render();sfx('tap')},
+  rematch:()=>{const g=getGame(view.id);newGame(isLocal(g)?(vsBot(g)?'bot':'hot'):g.seats[0]===g.seats[1]?'solo':'online',g.opts)},
+  opt:w=>{const [k,v]=w.split(':');OPTS[k]=v;try{localStorage.setItem(LS+'-opts',JSON.stringify(OPTS))}catch(e){}render();sfx('tap')},
+  del:async id=>{
+    if(confirmDel!==id){confirmDel=id;render();return}
+    confirmDel=null;
+    if(LOCAL[id]){delete LOCAL[id];lsSave();render();return}
+    const prev=REMOTE[id];delete REMOTE[id];render();
+    try{await DB.doc('games/'+id).delete()}catch(e){REMOTE[id]=prev;render();toast('Couldn’t delete that game.')}
+  },
+};
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
+  // Clicking the dimmed backdrop closes a modal; clicks inside it don't.
+  if(b.classList.contains('overlay')&&e.target!==b)return;
+  const a=b.dataset.a,arg=b.dataset.i;
+  if(GLOBAL[a])return GLOBAL[a](arg);
+  const g=getGame(view.id);if(!g)return;
+  const S=perspective(g,work),ctx={seat:S,canAct:canActIn(g,work),hot:isHot(g),label:i=>seatLabel(g,i)},h=GAME.on[a];
+  if(!h||!ctx.canAct)return;
+  if(h(work,arg,ctx)==='commit'){
+    const doc=clone(g);doc.state=clone(work);
+    if(work.over){doc.status='done';const a0=GAME.score(work,0),a1=GAME.score(work,1);sfx(a0===a1?'tap':(a0>a1?0:1)===S||isHot(g)?'win':'lose')}
+    else if(isHot(doc))handoff=view.id;
+    await saveGame(view.id,doc);window.scrollTo(0,0);
+  }else render();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal){modal=null;render()}});
+
+async function refreshNames(){
+  if(!USER)return;
+  const ids=new Set();
+  Object.values(REMOTE).forEach(g=>g.seats.forEach(s=>{if(s&&s!==ME&&!(s in names))ids.add(s)}));
+  if(!ids.size)return;
+  ids.forEach(id=>names[id]='');
+  try{const ps=await USER.profiles([...ids]);for(const id of ids)names[id]=(ps&&ps[id]&&ps[id].name)||'';render()}catch(e){}
+}
+async function init(){
+  LOCAL=lsLoad();
+  const h=(location.hash||'').slice(1);
+  if(h&&LOCAL[h])view={screen:'game',id:h};
+  render();
+  const cl=window.claude;if(!cl||!cl.use)return;
+  const [db,user]=await Promise.all([cl.use('db'),cl.use('user')]);
+  if(!db||!user)return;
+  const id=await user.id();if(!id)return;
+  DB=db;USER=user;ME=id;ONLINE=true;
+  try{if(await user.can('data.write')===false)CANWRITE=false}catch(e){}
+  render();
+  let first=true;
+  db.collection('games').onSnapshot(snap=>{
+    const next={};
+    snap.docs.forEach(d=>{const v=d.data();if(v&&v.state&&v.type===GAME.key)next[d.id]=v});
+    REMOTE=next;
+    if(first){first=false;if(h&&REMOTE[h]&&view.screen==='title')view={screen:'game',id:h}}
+    refreshNames();render();
+  },()=>toast('Lost the connection to shared games. Reload to reconnect.'));
+}
+init();
+
+</script>
+
+</body></html>
