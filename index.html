@@ -9,9 +9,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
-:root{--bg:#E9EEEA;--surface:#F8FAF7;--ink:#1B2320;--muted:#5A6661;--line:#C9D3CD;--accent:#2D5E8C;--ff:#7B4FA3;--lm:#1E7A70;--rl:#A0640F;--cd:#2F7A52;
+:root{--bg:#E9EEEA;--surface:#F8FAF7;--ink:#1B2320;--muted:#5A6661;--line:#C9D3CD;--accent:#2D5E8C;--ff:#7B4FA3;--lm:#1E7A70;--rl:#A0640F;--cd:#2F7A52;--ls:#A8443A;
   --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;--body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif}
-@media (prefers-color-scheme:dark){:root{--bg:#111715;--surface:#19211E;--ink:#E4EBE7;--muted:#97A49E;--line:#2E3934;--accent:#86AEDB;--ff:#BB98DD;--lm:#5CC4B7;--rl:#E2A64E;--cd:#6FD09A;color-scheme:dark}}
+@media (prefers-color-scheme:dark){:root{--bg:#111715;--surface:#19211E;--ink:#E4EBE7;--muted:#97A49E;--line:#2E3934;--accent:#86AEDB;--ff:#BB98DD;--lm:#5CC4B7;--rl:#E2A64E;--cd:#6FD09A;--ls:#F0937F;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
 main{max-width:1000px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
@@ -52,6 +52,10 @@ footer a{color:var(--accent)}
       <h2>Cut a Deal II</h2>
       <p>The second pass at Cut a Deal. The market is a cheap deck and a premium deck, so every cut has something you can afford. Your opponent shops first from the pile they take; everything they leave comes back to you, so blocking a pile costs them.</p>
       <div class="links"><a class="play" href="cut-a-deal-2/">Play</a></div>
+    <section class="game" style="--c:var(--ls)">
+      <h2>Lion’s Share</h2>
+      <p>The full game built on the cut. Split every market reveal into two piles and hide one card. Your opponent takes a pile, you shop from the other, and blocking isn’t free. Three ages, 14 rounds.</p>
+      <div class="links"><a class="play" href="lions-share/">Play</a></div>
     </section>
     <section class="game" style="--c:var(--lm)">
       <h2>Loom</h2>

@@ -9,6 +9,7 @@ Play them at **https://dyrota.github.io/prototypes/**
 | **Fair Folk** | Your opponent splits every hand you draw into two piles; you keep one. Then you split their next hand. | [fair-folk/](https://dyrota.github.io/prototypes/fair-folk/) |
 | **Cut a Deal** | A Fair Folk spin-off. You play your own hand as normal, but the market is split I-cut-you-choose: you cut 5 revealed cards into two piles, your opponent takes one, you shop from the other. | [cut-a-deal/](https://dyrota.github.io/prototypes/cut-a-deal/) |
 | **Cut a Deal II** | Second pass at Cut a Deal. Two market decks (reveal 3 cheap + 2 premium), the chooser shops first from their pile and everything they leave goes back to the cutter, and Bandit is once per turn. | [cut-a-deal-2/](https://dyrota.github.io/prototypes/cut-a-deal-2/) |
+| **Lion’s Share** | The full game built on Cut a Deal’s market. You cut each reveal into two piles with one card face down; your opponent takes one, you shop from the other, and a pile taken only to block costs a point per card. Three market ages over a fixed 14 rounds. | [lions-share/](https://dyrota.github.io/prototypes/lions-share/) |
 | **Loom** | Every card links one symbol to another. You continue the shared thread from the symbol your opponent ended on. | [loom/](https://dyrota.github.io/prototypes/loom/) |
 | **Relay** | Both players face the same 12 foes. Draft 1 of 3 cards; the 2 you pass go to your rival's next offer. | [relay/](https://dyrota.github.io/prototypes/relay/) |
 
@@ -28,6 +29,7 @@ src/
   fair-folk.js   rules, view and bot for each game (defines GAME)
   cut-a-deal.js
   cut-a-deal-2.js
+  lions-share.js
   loom.js
   relay.js
   shell.js       lobby, storage, bot runner, hotseat hand-off, online play
